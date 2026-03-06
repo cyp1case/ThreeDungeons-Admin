@@ -26,6 +26,7 @@ npx supabase db push
    - `migrations/20250305000000_initial_schema.sql`
    - `migrations/20250305000001_rls_policies.sql`
    - `migrations/20250305000002_auth_trigger.sql`
+   - `migrations/20250306000000_invite_code_verify.sql`
 
 ## Super-Admin Bootstrap
 
