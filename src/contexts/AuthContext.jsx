@@ -39,8 +39,10 @@ export function AuthProvider({ children }) {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session)
-      if (session) await fetchProfile(session.user.id)
-      else {
+      if (session) {
+        setLoading(true)
+        await fetchProfile(session.user.id)
+      } else {
         setProfile(null)
         setLoading(false)
       }
@@ -62,7 +64,6 @@ export function AuthProvider({ children }) {
         .single()
       if (error) {
         setProfile(null)
-        setLoading(false)
         await supabase.auth.signOut()
         return
       }
