@@ -2,7 +2,7 @@
 # https://supabase.com/docs/guides/local-development/cli/config
 # A string used to distinguish different Supabase projects on the same host. Defaults to the
 # working directory name when running `supabase init`.
-project_id = "ThreeDungeons"
+project_id = "ThreeDungeons-Admin"
 
 [api]
 enabled = true
@@ -353,13 +353,6 @@ enabled = false
 authorization_url_path = "/oauth/consent"
 # Allow dynamic client registration
 allow_dynamic_registration = false
-
-# Resident auth and telemetry use custom JWTs; gateway must not verify Supabase Auth JWT
-[functions.resident-login]
-verify_jwt = false
-
-[functions.report-telemetry]
-verify_jwt = false
 
 [edge_runtime]
 enabled = true

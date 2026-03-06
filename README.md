@@ -5,7 +5,8 @@ Admin panel and backend for the ThreeDungeons Residency RPG telemetry and authen
 ## Contents
 
 - **supabase/** – Database schema, RLS policies, auth trigger, Edge Functions (resident-login, report-telemetry)
-- **Planning Documents/** – Implementation plan, design guidelines, proposal, dev setup
+
+Planning documents (implementation plan, design guidelines, proposal, dev setup) live in the parent repo: `../Planning Documents/`
 
 ## Quick Start
 
