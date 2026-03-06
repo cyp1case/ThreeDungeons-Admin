@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 
 const AuthContext = createContext(null)
 const AUTH_LOAD_TIMEOUT_MS = 5000
+const FETCH_PROFILE_TIMEOUT_MS = 10000
 
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(null)
@@ -46,14 +47,7 @@ export function AuthProvider({ children }) {
       setSession(session)
       if (session) {
         setLoading(true)
-        const { data: { session: s } } = await supabase.auth.getSession()
-        if (cancelled) return
-        if (s) await fetchProfile(s.user.id)
-        else {
-          setSession(null)
-          setProfile(null)
-          setLoading(false)
-        }
+        await fetchProfile(session.user.id)
       } else {
         setProfile(null)
         setLoading(false)
@@ -69,12 +63,14 @@ export function AuthProvider({ children }) {
 
   async function fetchProfile(userId) {
     console.log('[Auth] fetchProfile start', userId)
+    const timeout = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('fetchProfile timeout')), FETCH_PROFILE_TIMEOUT_MS)
+    )
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, email, role, program_id')
-        .eq('id', userId)
-        .single()
+      const { data, error } = await Promise.race([
+        supabase.from('profiles').select('id, email, role, program_id').eq('id', userId).single(),
+        timeout,
+      ])
       if (error) {
         console.log('[Auth] fetchProfile error', error.message, error.code)
         setProfile(null)
@@ -83,8 +79,10 @@ export function AuthProvider({ children }) {
       }
       console.log('[Auth] fetchProfile success', data?.email, data?.role)
       setProfile(data)
+    } catch (err) {
+      console.log('[Auth] fetchProfile error', err?.message ?? err)
+      setProfile(null)
     } finally {
-      console.log('[Auth] fetchProfile finally, setLoading(false)')
       setLoading(false)
     }
   }
