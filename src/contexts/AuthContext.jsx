@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 
 const AuthContext = createContext(null)
+const AUTH_LOAD_TIMEOUT_MS = 5000
 
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(null)
@@ -9,37 +10,66 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      if (session) fetchProfile(session.user.id)
-      else setLoading(false)
-    })
+    let cancelled = false
+    const timeout = setTimeout(() => {
+      if (cancelled) return
+      setSession(null)
+      setProfile(null)
+      setLoading(false)
+    }, AUTH_LOAD_TIMEOUT_MS)
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+    supabase.auth
+      .getSession()
+      .then(({ data: { session } }) => {
+        if (cancelled) return
+        clearTimeout(timeout)
         setSession(session)
-        if (session) await fetchProfile(session.user.id)
-        else setProfile(null)
+        if (session) fetchProfile(session.user.id)
+        else setLoading(false)
+      })
+      .catch(() => {
+        if (cancelled) return
+        clearTimeout(timeout)
+        setSession(null)
+        setProfile(null)
+        setLoading(false)
+      })
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      setSession(session)
+      if (session) await fetchProfile(session.user.id)
+      else {
+        setProfile(null)
         setLoading(false)
       }
-    )
+    })
 
-    return () => subscription.unsubscribe()
+    return () => {
+      cancelled = true
+      clearTimeout(timeout)
+      subscription.unsubscribe()
+    }
   }, [])
 
   async function fetchProfile(userId) {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('id, email, role, program_id')
-      .eq('id', userId)
-      .single()
-    if (error) {
-      setProfile(null)
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, email, role, program_id')
+        .eq('id', userId)
+        .single()
+      if (error) {
+        setProfile(null)
+        setLoading(false)
+        await supabase.auth.signOut()
+        return
+      }
+      setProfile(data)
+    } finally {
       setLoading(false)
-      return
     }
-    setProfile(data)
-    setLoading(false)
   }
 
   async function refetchProfile() {
