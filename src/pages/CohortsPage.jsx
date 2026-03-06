@@ -15,27 +15,58 @@ export function CohortsPage() {
   const [manageModalOpen, setManageModalOpen] = useState(null)
 
   useEffect(() => {
-    if (!profile?.program_id) return
+    console.log('[CohortsPage] effect', {
+      hasProfile: !!profile,
+      programId: profile?.program_id ?? null,
+      role: profile?.role ?? null,
+    })
+    if (!profile?.program_id) {
+      console.log('[CohortsPage] skip fetch: no program_id (leader needs invite; super_admin has no program)')
+      return
+    }
     fetchData()
   }, [profile?.program_id])
 
   async function fetchData() {
+    const programId = profile?.program_id
+    if (!programId) return
+    console.log('[CohortsPage] fetchData start', programId)
     setLoading(true)
-    const { data: cohortData } = await supabase
+    const t0 = performance.now()
+    const { data: cohortData, error: cohortError } = await supabase
       .from('cohorts')
       .select('*')
-      .eq('program_id', profile.program_id)
+      .eq('program_id', programId)
       .order('name')
+    console.log('[CohortsPage] cohorts query', {
+      ms: Math.round(performance.now() - t0),
+      count: cohortData?.length ?? 0,
+      error: cohortError?.message ?? null,
+    })
     setCohorts(cohortData ?? [])
 
-    const { data: residentData } = await supabase
+    const t1 = performance.now()
+    const { data: residentData, error: residentError } = await supabase
       .from('residents')
       .select('id, email, display_name')
-      .eq('program_id', profile.program_id)
+      .eq('program_id', programId)
       .eq('active', true)
+    console.log('[CohortsPage] residents query', {
+      ms: Math.round(performance.now() - t1),
+      count: residentData?.length ?? 0,
+      error: residentError?.message ?? null,
+    })
     setResidents(residentData ?? [])
 
-    const { data: rcData } = await supabase.from('resident_cohorts').select('resident_id, cohort_id')
+    const t2 = performance.now()
+    const { data: rcData, error: rcError } = await supabase
+      .from('resident_cohorts')
+      .select('resident_id, cohort_id')
+    console.log('[CohortsPage] resident_cohorts query', {
+      ms: Math.round(performance.now() - t2),
+      count: rcData?.length ?? 0,
+      error: rcError?.message ?? null,
+    })
     const rc = {}
     rcData?.forEach((r) => {
       if (!rc[r.cohort_id]) rc[r.cohort_id] = new Set()
@@ -43,6 +74,7 @@ export function CohortsPage() {
     })
     setResidentCohorts(rc)
     setLoading(false)
+    console.log('[CohortsPage] fetchData done')
   }
 
   function getMemberCount(cohortId) {

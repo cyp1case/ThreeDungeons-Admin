@@ -22,7 +22,7 @@ BEGIN
   -- 1. Leader: Program.Director@ThreeDungeons.com
   INSERT INTO auth.users (
     id, instance_id, aud, role, email, encrypted_password,
-    email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at
+    email_confirmed_at, confirmation_token, raw_app_meta_data, raw_user_meta_data, created_at, updated_at
   )
   VALUES (
     v_leader_id,
@@ -32,12 +32,13 @@ BEGIN
     'Program.Director@ThreeDungeons.com',
     v_encrypted_pw,
     NOW(),
+    '',
     '{"provider":"email","providers":["email"]}',
     '{}',
     NOW(),
     NOW()
   )
-  ON CONFLICT (id) DO NOTHING;
+  ON CONFLICT (id) DO UPDATE SET confirmation_token = COALESCE(auth.users.confirmation_token, '');
 
   INSERT INTO auth.identities (id, user_id, identity_data, provider, provider_id, last_sign_in_at, created_at, updated_at)
   VALUES (
@@ -59,7 +60,7 @@ BEGIN
   -- 2. Super Admin: Vivek.Medepalli@ThreeDungeons.com
   INSERT INTO auth.users (
     id, instance_id, aud, role, email, encrypted_password,
-    email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at
+    email_confirmed_at, confirmation_token, raw_app_meta_data, raw_user_meta_data, created_at, updated_at
   )
   VALUES (
     v_super_id,
@@ -69,12 +70,13 @@ BEGIN
     'Vivek.Medepalli@ThreeDungeons.com',
     v_encrypted_pw,
     NOW(),
+    '',
     '{"provider":"email","providers":["email"]}',
     '{}',
     NOW(),
     NOW()
   )
-  ON CONFLICT (id) DO NOTHING;
+  ON CONFLICT (id) DO UPDATE SET confirmation_token = COALESCE(auth.users.confirmation_token, '');
 
   INSERT INTO auth.identities (id, user_id, identity_data, provider, provider_id, last_sign_in_at, created_at, updated_at)
   VALUES (

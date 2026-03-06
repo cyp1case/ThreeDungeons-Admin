@@ -31,18 +31,35 @@ export function ResidentsPage() {
   const pageSize = 10
 
   useEffect(() => {
-    if (!profile?.program_id) return
+    console.log('[ResidentsPage] effect', {
+      hasProfile: !!profile,
+      programId: profile?.program_id ?? null,
+      role: profile?.role ?? null,
+    })
+    if (!profile?.program_id) {
+      console.log('[ResidentsPage] skip fetch: no program_id (leader needs invite; super_admin has no program)')
+      return
+    }
     fetchResidents()
     fetchCohorts()
   }, [profile?.program_id])
 
   async function fetchResidents() {
+    const programId = profile?.program_id
+    if (!programId) return
+    console.log('[ResidentsPage] fetchResidents start', programId)
     setLoading(true)
+    const t0 = performance.now()
     const { data, error } = await supabase
       .from('residents')
       .select('*')
-      .eq('program_id', profile.program_id)
+      .eq('program_id', programId)
       .order('created_at', { ascending: false })
+    console.log('[ResidentsPage] residents query', {
+      ms: Math.round(performance.now() - t0),
+      count: data?.length ?? 0,
+      error: error?.message ?? null,
+    })
     if (error) {
       showToast(`Failed to load residents: ${error.message}`, 'error')
       setResidents([])
@@ -50,22 +67,38 @@ export function ResidentsPage() {
       setResidents(data ?? [])
     }
     const rc = {}
-    const { data: rcData } = await supabase
+    const t1 = performance.now()
+    const { data: rcData, error: rcError } = await supabase
       .from('resident_cohorts')
       .select('resident_id, cohort_id')
+    console.log('[ResidentsPage] resident_cohorts query', {
+      ms: Math.round(performance.now() - t1),
+      count: rcData?.length ?? 0,
+      error: rcError?.message ?? null,
+    })
     rcData?.forEach((r) => {
       if (!rc[r.resident_id]) rc[r.resident_id] = []
       rc[r.resident_id].push(r.cohort_id)
     })
     setResidentCohorts(rc)
     setLoading(false)
+    console.log('[ResidentsPage] fetchResidents done')
   }
 
   async function fetchCohorts() {
-    const { data } = await supabase
+    const programId = profile?.program_id
+    if (!programId) return
+    console.log('[ResidentsPage] fetchCohorts start', programId)
+    const t0 = performance.now()
+    const { data, error } = await supabase
       .from('cohorts')
       .select('id, name')
-      .eq('program_id', profile.program_id)
+      .eq('program_id', programId)
+    console.log('[ResidentsPage] cohorts query', {
+      ms: Math.round(performance.now() - t0),
+      count: data?.length ?? 0,
+      error: error?.message ?? null,
+    })
     setCohorts(data ?? [])
   }
 
