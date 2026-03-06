@@ -11,7 +11,7 @@ export function SignupPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
-  const { session, loading: authLoading } = useAuth()
+  const { session, loading: authLoading, refetchProfile } = useAuth()
 
   if (authLoading) {
     return (
@@ -80,6 +80,7 @@ export function SignupPage() {
       return
     }
 
+    await refetchProfile()
     setLoading(false)
     navigate('/')
   }

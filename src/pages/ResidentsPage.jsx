@@ -38,12 +38,17 @@ export function ResidentsPage() {
 
   async function fetchResidents() {
     setLoading(true)
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('residents')
       .select('*')
       .eq('program_id', profile.program_id)
       .order('created_at', { ascending: false })
-    setResidents(data ?? [])
+    if (error) {
+      showToast(`Failed to load residents: ${error.message}`, 'error')
+      setResidents([])
+    } else {
+      setResidents(data ?? [])
+    }
     const rc = {}
     const { data: rcData } = await supabase
       .from('resident_cohorts')
@@ -79,6 +84,17 @@ export function ResidentsPage() {
       .filter((c) => cohortIds.includes(c.id))
       .map((c) => c.name)
       .join(', ') || '—'
+  }
+
+  if (profile && profile.role === 'leader' && !profile.program_id) {
+    return (
+      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+        <p className="text-sm text-amber-800">
+          Your account is not linked to a program. Please sign out and sign up again with a valid
+          invite code, or contact your administrator.
+        </p>
+      </div>
+    )
   }
 
   return (
@@ -145,7 +161,14 @@ export function ResidentsPage() {
                 </tr>
               </thead>
               <tbody>
-                {paginated.map((r) => (
+                {paginated.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="px-4 py-12 text-center text-gray-500">
+                      No residents yet. Add residents using the buttons above.
+                    </td>
+                  </tr>
+                ) : (
+                paginated.map((r) => (
                   <tr key={r.id} className="border-b hover:bg-gray-50">
                     <td className="px-4 py-3">
                       <div className="font-medium text-gray-900">
@@ -173,7 +196,8 @@ export function ResidentsPage() {
                       />
                     </td>
                   </tr>
-                ))}
+                ))
+                )}
               </tbody>
             </table>
             <div className="flex items-center justify-between px-4 py-3 border-t">

@@ -42,6 +42,11 @@ export function AuthProvider({ children }) {
     setLoading(false)
   }
 
+  async function refetchProfile() {
+    const session = (await supabase.auth.getSession()).data.session
+    if (session) await fetchProfile(session.user.id)
+  }
+
   const isSuperAdmin = () => {
     const email = import.meta.env.VITE_SUPER_ADMIN_EMAIL
     return profile?.role === 'super_admin' || (email && profile?.email === email)
@@ -59,6 +64,7 @@ export function AuthProvider({ children }) {
         loading,
         isSuperAdmin,
         signOut,
+        refetchProfile,
       }}
     >
       {children}
