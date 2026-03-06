@@ -13,6 +13,7 @@ export function AuthProvider({ children }) {
     let cancelled = false
     const timeout = setTimeout(() => {
       if (cancelled) return
+      console.log('[Auth] 5s timeout fired')
       setSession(null)
       setProfile(null)
       setLoading(false)
@@ -23,13 +24,15 @@ export function AuthProvider({ children }) {
       .then(({ data: { session } }) => {
         if (cancelled) return
         clearTimeout(timeout)
+        console.log('[Auth] getSession resolved', session?.user?.email ?? 'null')
         setSession(session)
         if (session) fetchProfile(session.user.id)
         else setLoading(false)
       })
-      .catch(() => {
+      .catch((err) => {
         if (cancelled) return
         clearTimeout(timeout)
+        console.log('[Auth] getSession error', err)
         setSession(null)
         setProfile(null)
         setLoading(false)
@@ -37,7 +40,8 @@ export function AuthProvider({ children }) {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('[Auth] onAuthStateChange', event, session?.user?.email ?? 'null')
       setSession(session)
       if (session) {
         setLoading(true)
@@ -56,6 +60,7 @@ export function AuthProvider({ children }) {
   }, [])
 
   async function fetchProfile(userId) {
+    console.log('[Auth] fetchProfile start', userId)
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -63,12 +68,15 @@ export function AuthProvider({ children }) {
         .eq('id', userId)
         .single()
       if (error) {
+        console.log('[Auth] fetchProfile error', error.message, error.code)
         setProfile(null)
         await supabase.auth.signOut()
         return
       }
+      console.log('[Auth] fetchProfile success', data?.email, data?.role)
       setProfile(data)
     } finally {
+      console.log('[Auth] fetchProfile finally, setLoading(false)')
       setLoading(false)
     }
   }

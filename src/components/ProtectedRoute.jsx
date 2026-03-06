@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext'
 export function ProtectedRoute({ children }) {
   const { session, profile, loading } = useAuth()
   const location = useLocation()
+  console.log('[ProtectedRoute] render', { loading, hasSession: !!session, hasProfile: !!profile })
 
   if (loading) {
     return (

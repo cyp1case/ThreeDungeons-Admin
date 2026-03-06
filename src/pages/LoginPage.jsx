@@ -10,6 +10,7 @@ export function LoginPage() {
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
   const { session, loading: authLoading } = useAuth()
+  console.log('[LoginPage] render', { authLoading, hasSession: !!session })
 
   if (authLoading) {
     return (
@@ -34,6 +35,7 @@ export function LoginPage() {
       setError(err.message || 'Invalid login credentials')
       return
     }
+    console.log('[LoginPage] signIn success, navigating to /')
     navigate('/')
   }
 
