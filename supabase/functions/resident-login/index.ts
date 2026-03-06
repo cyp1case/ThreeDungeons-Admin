@@ -1,5 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { compare } from "https://deno.land/x/bcrypt@v0.4.1/mod.ts";
+import bcryptjs from "npm:bcryptjs@2.4.3";
 import { SignJWT } from "https://deno.land/x/jose@v5.2.0/index.ts";
 
 const corsHeaders = {
@@ -65,7 +65,7 @@ Deno.serve(async (req) => {
     }
 
     const row = rows[0];
-    const match = await compare(password, row.password_hash);
+    const match = bcryptjs.compareSync(password, row.password_hash);
     if (!match) {
       return jsonResponse({ error: "Invalid email or password" }, 401);
     }
