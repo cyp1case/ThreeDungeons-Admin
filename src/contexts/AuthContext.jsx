@@ -46,7 +46,14 @@ export function AuthProvider({ children }) {
       setSession(session)
       if (session) {
         setLoading(true)
-        await fetchProfile(session.user.id)
+        const { data: { session: s } } = await supabase.auth.getSession()
+        if (cancelled) return
+        if (s) await fetchProfile(s.user.id)
+        else {
+          setSession(null)
+          setProfile(null)
+          setLoading(false)
+        }
       } else {
         setProfile(null)
         setLoading(false)
