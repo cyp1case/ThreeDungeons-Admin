@@ -1,0 +1,8 @@
+{
+  "name": "threedungeons-admin",
+  "version": "1.0.0",
+  "private": true,
+  "devDependencies": {
+    "supabase": "^2.76.17"
+  }
+}
