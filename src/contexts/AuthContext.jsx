@@ -1,95 +1,103 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 
 const AuthContext = createContext(null)
-const AUTH_LOAD_TIMEOUT_MS = 5000
-const FETCH_PROFILE_TIMEOUT_MS = 10000
 
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(null)
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
+  const initialised = useRef(false)
 
   useEffect(() => {
     let cancelled = false
-    const timeout = setTimeout(() => {
-      if (cancelled) return
-      console.log('[Auth] 5s timeout fired')
-      setSession(null)
-      setProfile(null)
-      setLoading(false)
-    }, AUTH_LOAD_TIMEOUT_MS)
 
-    supabase.auth
-      .getSession()
-      .then(({ data: { session } }) => {
-        if (cancelled) return
-        clearTimeout(timeout)
-        console.log('[Auth] getSession resolved', session?.user?.email ?? 'null')
-        setSession(session)
-        if (session) fetchProfile(session.user.id)
-        else setLoading(false)
-      })
-      .catch((err) => {
-        if (cancelled) return
-        clearTimeout(timeout)
-        console.log('[Auth] getSession error', err)
-        setSession(null)
-        setProfile(null)
-        setLoading(false)
-      })
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('[Auth] onAuthStateChange', event, session?.user?.email ?? 'null')
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('[Auth] onAuthStateChange', event, session?.user?.email ?? 'null')
-      if (session) clearTimeout(timeout)
-      setSession(session)
-      if (session) {
-        setLoading(true)
-        await fetchProfile(session.user.id)
-      } else {
-        setProfile(null)
-        setLoading(false)
+        if (event === 'INITIAL_SESSION') {
+          // Client is fully ready (token refresh complete). Safe to make API calls.
+          initialised.current = true
+          setSession(session)
+          if (session) {
+            await fetchProfile(session.user.id)
+          } else {
+            setLoading(false)
+          }
+          return
+        }
+
+        if (event === 'SIGNED_IN') {
+          // On page load with stored creds, SIGNED_IN fires before INITIAL_SESSION
+          // while the client is still refreshing tokens. Skip it — INITIAL_SESSION
+          // will handle it. For fresh logins, initialised is already true.
+          if (!initialised.current) return
+          setSession(session)
+          if (session) await fetchProfile(session.user.id)
+          return
+        }
+
+        if (event === 'SIGNED_OUT') {
+          setSession(null)
+          setProfile(null)
+          setLoading(false)
+          return
+        }
+
+        if (event === 'TOKEN_REFRESHED') {
+          setSession(session)
+        }
       }
-    })
+    )
 
     return () => {
       cancelled = true
-      clearTimeout(timeout)
       subscription.unsubscribe()
+    }
+
+    async function fetchProfile(userId) {
+      if (cancelled) return
+      console.log('[Auth] fetchProfile start', userId)
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id, email, role, program_id')
+          .eq('id', userId)
+          .single()
+        if (cancelled) return
+        if (error) {
+          console.log('[Auth] fetchProfile error', error.message, error.code)
+          setProfile(null)
+          await supabase.auth.signOut()
+          return
+        }
+        console.log('[Auth] fetchProfile success', data?.email, data?.role)
+        setProfile(data)
+      } catch (err) {
+        console.log('[Auth] fetchProfile error', err)
+        if (!cancelled) setProfile(null)
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
     }
   }, [])
 
-  async function fetchProfile(userId) {
-    console.log('[Auth] fetchProfile start', userId)
-    const timeout = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('fetchProfile timeout')), FETCH_PROFILE_TIMEOUT_MS)
-    )
+  async function refetchProfile() {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) return
+    setLoading(true)
     try {
-      const { data, error } = await Promise.race([
-        supabase.from('profiles').select('id, email, role, program_id').eq('id', userId).single(),
-        timeout,
-      ])
-      if (error) {
-        console.log('[Auth] fetchProfile error', error.message, error.code)
-        setProfile(null)
-        await supabase.auth.signOut()
-        return
-      }
-      console.log('[Auth] fetchProfile success', data?.email, data?.role)
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, email, role, program_id')
+        .eq('id', session.user.id)
+        .single()
+      if (error) throw error
       setProfile(data)
-    } catch (err) {
-      console.log('[Auth] fetchProfile error', err?.message ?? err)
-      setProfile(null)
     } finally {
       setLoading(false)
     }
-  }
-
-  async function refetchProfile() {
-    const session = (await supabase.auth.getSession()).data.session
-    if (session) await fetchProfile(session.user.id)
   }
 
   const isSuperAdmin = () => {
@@ -103,14 +111,7 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider
-      value={{
-        session,
-        profile,
-        loading,
-        isSuperAdmin,
-        signOut,
-        refetchProfile,
-      }}
+      value={{ session, profile, loading, isSuperAdmin, signOut, refetchProfile }}
     >
       {children}
     </AuthContext.Provider>

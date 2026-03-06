@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
@@ -12,6 +12,12 @@ export function LoginPage() {
   const { session, loading: authLoading } = useAuth()
   console.log('[LoginPage] render', { authLoading, hasSession: !!session })
 
+  useEffect(() => {
+    if (!authLoading && session) {
+      navigate('/', { replace: true })
+    }
+  }, [authLoading, session, navigate])
+
   if (authLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -21,7 +27,6 @@ export function LoginPage() {
   }
 
   if (session) {
-    navigate('/', { replace: true })
     return null
   }
 
