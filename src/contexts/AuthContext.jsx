@@ -42,6 +42,7 @@ export function AuthProvider({ children }) {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('[Auth] onAuthStateChange', event, session?.user?.email ?? 'null')
+      if (session) clearTimeout(timeout)
       setSession(session)
       if (session) {
         setLoading(true)
