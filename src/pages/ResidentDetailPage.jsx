@@ -1,12 +1,34 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import bcrypt from 'bcryptjs'
+import {
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  Radar,
+  Legend,
+  ResponsiveContainer,
+  BarChart,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+  Bar,
+} from 'recharts'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
 import { Modal } from 'flowbite-react'
 import { DUNGEONS } from '../lib/dungeonConfig'
-import { getResidentDungeonProgress } from '../lib/dungeonProgress'
+import {
+  getResidentDungeonProgress,
+  getResidentQuestionBreakdown,
+} from '../lib/dungeonProgress'
+import { Card } from '../components/Card'
+import { CardTitle } from '../components/CardTitle'
+import { StatusBadge } from '../components/StatusBadge'
+import { ProgressBar } from '../components/ProgressBar'
+import { CHART_COLORS } from '../lib/chartTheme'
 
 function generatePassword() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789'
@@ -42,6 +64,7 @@ export function ResidentDetailPage() {
   const [loading, setLoading] = useState(true)
   const [moduleFilter, setModuleFilter] = useState('')
   const [dateFilter, setDateFilter] = useState('all')
+  const [selectedDungeonForChart, setSelectedDungeonForChart] = useState(DUNGEONS[0]?.id ?? '')
   const [resetModalOpen, setResetModalOpen] = useState(false)
   const [deactivateModalOpen, setDeactivateModalOpen] = useState(false)
   const [resetResultModal, setResetResultModal] = useState(null)
@@ -100,19 +123,40 @@ export function ResidentDetailPage() {
   const moduleIds = [...new Set(attempts.map((a) => a.module_id))]
   const dungeonProgress = getResidentDungeonProgress(attempts, DUNGEONS, id)
 
+  const radarData =
+    dungeonProgress.length > 0
+      ? dungeonProgress.map((d) => ({
+          topic: `${d.topic} (${d.dungeonName.replace(/^The /, '').split(' ')[0]})`,
+          completion: d.completionPct,
+          wrong: d.wrongPct,
+        }))
+      : []
+
+  const selectedDungeon = DUNGEONS.find((d) => d.id === selectedDungeonForChart) ?? DUNGEONS[0]
+  const questionBreakdown = selectedDungeon
+    ? getResidentQuestionBreakdown(attempts, selectedDungeon, id)
+    : []
+
+  const overallCompletion =
+    dungeonProgress.length > 0
+      ? Math.round(
+          dungeonProgress.reduce((a, p) => a + p.completionPct, 0) / dungeonProgress.length
+        )
+      : 0
+
   if (loading && !resident) {
     return (
       <div className="flex justify-center py-12">
-        <div className="w-8 h-8 border-4 border-gray-200 border-t-primary-700 rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-border-dark border-t-royal-blue rounded-full animate-spin" />
       </div>
     )
   }
 
   if (!resident) {
     return (
-      <div className="bg-white rounded-lg shadow-sm p-6">
-        <p className="text-gray-500">Resident not found.</p>
-        <Link to="/residents" className="text-primary-600 hover:underline mt-2 inline-block">
+      <div className="bg-surface-card border-2 border-border-dark rounded-sm p-6">
+        <p className="text-text-muted">Resident not found.</p>
+        <Link to="/residents" className="text-royal-blue-light hover:underline mt-2 inline-block">
           Back to Residents
         </Link>
       </div>
@@ -121,88 +165,206 @@ export function ResidentDetailPage() {
 
   return (
     <>
-      <nav className="text-sm text-gray-500 mb-4">
-        <Link to="/residents" className="hover:text-gray-700">
+      <nav className="text-xs text-text-muted mb-4">
+        <Link to="/residents" className="text-royal-blue-light hover:text-text-bright">
           Residents
         </Link>
         <span className="mx-2">/</span>
-        <span className="text-gray-900">{resident.display_name || resident.email}</span>
+        <span className="text-text-primary">{resident.display_name || resident.email}</span>
       </nav>
 
-      <h1 className="text-2xl font-semibold text-gray-900 mb-6">
+      <h1
+        className="font-pixel text-sm text-flag-yellow mb-6"
+        style={{ textShadow: '0 0 12px rgba(244,196,48,0.3)' }}
+      >
         {resident.display_name || resident.email}
       </h1>
 
-      <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+      <div className="bg-surface-card border-2 border-border-dark rounded-sm p-6 mb-6 relative overflow-hidden">
+        <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-royal-blue to-transparent opacity-50" />
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2 mb-4">
           <div>
-            <span className="text-sm text-gray-500">Email:</span>
-            <span className="text-sm text-gray-900 font-medium ml-2">{resident.email}</span>
+            <span className="text-[10px] text-text-muted font-bold uppercase tracking-wider">
+              Email:
+            </span>
+            <span className="text-sm text-text-primary font-semibold ml-2">{resident.email}</span>
           </div>
           <div>
-            <span className="text-sm text-gray-500">Status:</span>
-            <span
-              className={`ml-2 px-2.5 py-0.5 text-xs font-medium rounded-full ${
-                resident.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-              }`}
-            >
-              {resident.active ? 'Active' : 'Inactive'}
+            <span className="text-[10px] text-text-muted font-bold uppercase tracking-wider">
+              Status:
+            </span>
+            <span className="ml-2">
+              {resident.active ? (
+                <StatusBadge outcome="correct">Active</StatusBadge>
+              ) : (
+                <span className="bg-[rgba(144,152,168,0.15)] text-text-muted border-2 border-border-accent rounded-sm px-2.5 py-0.5 text-xs font-bold">
+                  Inactive
+                </span>
+              )}
             </span>
           </div>
           <div>
-            <span className="text-sm text-gray-500">Cohorts:</span>
-            <span className="text-sm text-gray-900 font-medium ml-2">
+            <span className="text-[10px] text-text-muted font-bold uppercase tracking-wider">
+              Cohorts:
+            </span>
+            <span className="text-sm text-text-primary font-semibold ml-2">
               {cohorts.join(', ') || '—'}
             </span>
           </div>
           <div>
-            <span className="text-sm text-gray-500">Joined:</span>
-            <span className="text-sm text-gray-900 font-medium ml-2">
+            <span className="text-[10px] text-text-muted font-bold uppercase tracking-wider">
+              Joined:
+            </span>
+            <span className="text-sm text-text-primary font-semibold ml-2">
               {formatDate(resident.created_at)}
             </span>
           </div>
         </div>
+        <div className="mb-2">
+          <span className="text-[10px] text-text-muted font-bold uppercase tracking-wider">
+            Overall completion:
+          </span>
+          <span
+            className="text-fantasy-green font-bold ml-2"
+            style={{ textShadow: '0 0 8px rgba(92,161,54,0.3)' }}
+          >
+            {overallCompletion}%
+          </span>
+        </div>
         <div className="flex gap-2">
           <button
             onClick={() => setResetModalOpen(true)}
-            className="px-4 py-2 text-sm font-medium text-gray-900 border border-gray-300 rounded-lg hover:bg-gray-100"
+            className="bg-transparent text-text-muted border-2 border-border-accent rounded-sm hover:text-text-bright uppercase tracking-wider text-xs font-bold px-4 py-2"
           >
             Reset Password
           </button>
           <button
             onClick={() => setDeactivateModalOpen(true)}
-            className="px-4 py-2 text-sm font-medium text-red-600 border border-red-300 rounded-lg hover:bg-red-50"
+            className="bg-gradient-to-b from-roof-red-light to-roof-red border-2 border-[#A82518] rounded-sm text-white shadow-[0_0_8px_rgba(211,47,35,0.3)] uppercase tracking-wider text-xs font-bold px-4 py-2"
           >
             {resident.active ? 'Deactivate' : 'Activate'}
           </button>
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Dungeon Progress</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {dungeonProgress.map((d) => (
-            <div key={d.dungeonId} className="border border-gray-200 rounded-lg p-3">
-              <p className="font-medium text-gray-900 text-sm">{d.dungeonName}</p>
-              <p className="text-xs text-gray-500 mb-2">{d.topic}</p>
-              <p className="text-sm text-gray-700">
-                {d.completedQuestions} / {d.totalQuestions} complete
-              </p>
-              <p className="text-sm text-gray-600">
-                {d.completionPct}% complete · {d.wrongPct}% wrong
-              </p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        {dungeonProgress.map((d) => (
+          <div
+            key={d.dungeonId}
+            className="relative bg-surface-card border-2 border-border-dark rounded-sm p-4 text-center overflow-hidden shadow-[0_4px_12px_rgba(0,0,0,0.3)]"
+          >
+            <div
+              className={`absolute top-0 left-0 right-0 h-0.5 ${
+                d.completionPct >= 80
+                  ? 'bg-fantasy-green shadow-[0_0_8px_rgba(92,161,54,0.3)]'
+                  : d.completionPct >= 50
+                    ? 'bg-flag-yellow shadow-[0_0_8px_rgba(244,196,48,0.3)]'
+                    : 'bg-roof-red shadow-[0_0_8px_rgba(211,47,35,0.3)]'
+              }`}
+            />
+            <p className="font-pixel text-[8px] text-text-bright leading-relaxed">
+              {d.dungeonName.toUpperCase()}
+            </p>
+            <p className="text-[11px] text-text-muted mb-3">{d.topic}</p>
+            <p
+              className={`font-pixel text-lg ${
+                d.completionPct >= 80
+                  ? 'text-fantasy-green'
+                  : d.completionPct >= 50
+                    ? 'text-flag-yellow'
+                    : 'text-roof-red'
+              }`}
+              style={{
+                textShadow:
+                  d.completionPct >= 80
+                    ? '0 0 8px rgba(92,161,54,0.3)'
+                    : d.completionPct >= 50
+                      ? '0 0 8px rgba(244,196,48,0.3)'
+                      : '0 0 8px rgba(211,47,35,0.3)',
+              }}
+            >
+              {d.completionPct}%
+            </p>
+            <p className="text-xs text-text-muted">
+              {d.completedQuestions} / {d.totalQuestions} complete
+            </p>
+            <p className="text-[11px] text-roof-red mt-1">{d.wrongPct}% wrong</p>
+            <div className="mt-2">
+              <ProgressBar pct={d.completionPct} />
             </div>
-          ))}
-        </div>
+          </div>
+        ))}
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm p-4">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Attempt Log</h2>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+        <Card>
+          <CardTitle>PERFORMANCE RADAR</CardTitle>
+          <div className="h-[280px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <RadarChart data={radarData}>
+                <PolarGrid stroke="rgba(255,255,255,0.06)" />
+                <PolarAngleAxis dataKey="topic" tick={{ fill: '#AAAACC', fontSize: 10 }} />
+                <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fill: '#9098A8', fontSize: 10 }} />
+                <Radar
+                  name="Completion %"
+                  dataKey="completion"
+                  stroke={CHART_COLORS.royalBlue}
+                  fill="rgba(51,102,204,0.12)"
+                />
+                <Radar
+                  name="Wrong %"
+                  dataKey="wrong"
+                  stroke={CHART_COLORS.roofRed}
+                  fill="rgba(211,47,35,0.08)"
+                />
+                <Legend />
+              </RadarChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
+        <Card>
+          <CardTitle>QUESTION BREAKDOWN</CardTitle>
+          <select
+            value={selectedDungeonForChart}
+            onChange={(e) => setSelectedDungeonForChart(e.target.value)}
+            className="mb-3 bg-surface-inner border-2 border-border-dark text-text-primary text-sm rounded-sm p-2.5 font-sans"
+          >
+            {DUNGEONS.map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.name}
+              </option>
+            ))}
+          </select>
+          <div className="h-[240px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={questionBreakdown}
+                layout="vertical"
+                margin={{ left: 80, right: 20 }}
+              >
+                <CartesianGrid stroke="rgba(255,255,255,0.04)" />
+                <XAxis type="number" tick={{ fill: '#9098A8', fontSize: 10 }} />
+                <YAxis
+                  type="category"
+                  dataKey="label"
+                  tick={{ fill: '#9098A8', fontSize: 9 }}
+                  width={75}
+                />
+                <Bar dataKey="correct" stackId="a" fill={CHART_COLORS.fantasyGreen} name="Correct" />
+                <Bar dataKey="wrong" stackId="a" fill={CHART_COLORS.roofRed} name="Wrong" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
+      </div>
+
+      <Card>
+        <CardTitle>ATTEMPT LOG</CardTitle>
         <div className="flex gap-4 mb-4 flex-wrap">
           <select
             value={moduleFilter}
             onChange={(e) => setModuleFilter(e.target.value)}
-            className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg p-2.5"
+            className="bg-surface-inner border-2 border-border-dark text-text-primary text-sm rounded-sm p-2.5 font-sans"
           >
             <option value="">All Modules</option>
             {moduleIds.map((m) => (
@@ -214,7 +376,7 @@ export function ResidentDetailPage() {
           <select
             value={dateFilter}
             onChange={(e) => setDateFilter(e.target.value)}
-            className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg p-2.5"
+            className="bg-surface-inner border-2 border-border-dark text-text-primary text-sm rounded-sm p-2.5 font-sans"
           >
             <option value="all">All time</option>
             <option value="7">Last 7 days</option>
@@ -222,50 +384,42 @@ export function ResidentDetailPage() {
           </select>
         </div>
         {filteredAttempts.length === 0 ? (
-          <p className="text-gray-500 text-sm py-8 text-center">
+          <p className="text-text-muted text-sm py-8 text-center">
             No attempts recorded yet. This resident hasn&apos;t played the game.
           </p>
         ) : (
-          <>
-            <table className="w-full text-sm text-left text-gray-500">
-              <thead className="text-xs text-gray-700 uppercase bg-gray-50">
-                <tr>
-                  <th className="px-4 py-3">Timestamp</th>
-                  <th className="px-4 py-3">Module</th>
-                  <th className="px-4 py-3">Action</th>
-                  <th className="px-4 py-3">Outcome</th>
+          <table className="w-full text-sm text-left text-text-primary">
+            <thead className="text-[10px] text-text-muted uppercase tracking-wider bg-surface-inner font-bold">
+              <tr>
+                <th className="px-3.5 py-2.5">Timestamp</th>
+                <th className="px-3.5 py-2.5">Module</th>
+                <th className="px-3.5 py-2.5">Action</th>
+                <th className="px-3.5 py-2.5">Outcome</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredAttempts.map((a) => (
+                <tr key={a.id} className="border-b border-border-dark hover:bg-[rgba(29,59,142,0.1)]">
+                  <td className="px-3.5 py-2.5 text-xs text-text-muted font-mono">
+                    {formatDate(a.created_at)}
+                  </td>
+                  <td className="px-3.5 py-2.5 text-sm text-text-bright">
+                    {formatModuleId(a.module_id)}
+                  </td>
+                  <td className="px-3.5 py-2.5 text-sm text-text-primary">
+                    {formatModuleId(a.action)}
+                  </td>
+                  <td className="px-3.5 py-2.5">
+                    <StatusBadge outcome={a.outcome === 'correct' ? 'correct' : 'incorrect'}>
+                      {a.outcome === 'correct' ? 'Correct' : 'Incorrect'}
+                    </StatusBadge>
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {filteredAttempts.map((a) => (
-                  <tr key={a.id} className="border-b hover:bg-gray-50">
-                    <td className="px-4 py-3 text-sm text-gray-500 font-mono">
-                      {formatDate(a.created_at)}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-900">
-                      {formatModuleId(a.module_id)}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-700">
-                      {formatModuleId(a.action)}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`px-2.5 py-0.5 text-xs font-medium rounded-full ${
-                          a.outcome === 'correct'
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-red-100 text-red-800'
-                        }`}
-                      >
-                        {a.outcome === 'correct' ? 'Correct' : 'Incorrect'}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </>
+              ))}
+            </tbody>
+          </table>
         )}
-      </div>
+      </Card>
 
       {resetModalOpen && (
         <ResetPasswordModal
@@ -282,22 +436,20 @@ export function ResidentDetailPage() {
         <Modal show onClose={() => setResetResultModal(null)}>
           <Modal.Header>New Password</Modal.Header>
           <Modal.Body>
-            <p className="text-sm text-gray-600 mb-2">
-              Copy and share with the resident.
-            </p>
+            <p className="text-sm text-text-muted mb-2">Copy and share with the resident.</p>
             <div className="flex gap-2">
               <input
                 type="text"
                 value={resetResultModal}
                 readOnly
-                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block flex-1 p-2.5 font-mono"
+                className="bg-surface-inner border-2 border-border-dark text-text-primary text-sm rounded-sm block flex-1 p-2.5 font-mono"
               />
               <button
                 onClick={() => {
                   navigator.clipboard.writeText(resetResultModal)
                   showToast('Copied to clipboard', 'success')
                 }}
-                className="px-3 py-2 text-sm border rounded-lg hover:bg-gray-100"
+                className="px-3 py-2 text-sm border-2 border-border-dark rounded-sm hover:bg-surface-inner text-text-primary"
               >
                 Copy
               </button>
@@ -306,7 +458,7 @@ export function ResidentDetailPage() {
           <Modal.Footer>
             <button
               onClick={() => setResetResultModal(null)}
-              className="px-5 py-2.5 text-sm font-medium text-white bg-primary-700 rounded-lg hover:bg-primary-800"
+              className="px-5 py-2.5 text-sm font-medium text-white bg-gradient-to-b from-royal-blue-light to-royal-blue border-2 border-royal-blue-dark rounded-sm"
             >
               Close
             </button>
@@ -348,21 +500,21 @@ function ResetPasswordModal({ resident, onClose, onSuccess }) {
     <Modal show onClose={onClose}>
       <Modal.Header>Reset Password</Modal.Header>
       <Modal.Body>
-        <p className="text-sm text-gray-600">
+        <p className="text-sm text-text-muted">
           Reset password for {resident.email}? They will need the new password to log in.
         </p>
       </Modal.Body>
       <Modal.Footer>
         <button
           onClick={onClose}
-          className="px-5 py-2.5 text-sm font-medium text-gray-900 bg-white border border-gray-300 rounded-lg hover:bg-gray-100"
+          className="px-5 py-2.5 text-sm font-medium bg-transparent text-text-muted border-2 border-border-accent rounded-sm hover:text-text-bright"
         >
           Cancel
         </button>
         <button
           onClick={handleConfirm}
           disabled={loading}
-          className="px-5 py-2.5 text-sm font-medium text-white bg-primary-700 rounded-lg hover:bg-primary-800"
+          className="px-5 py-2.5 text-sm font-medium text-white bg-gradient-to-b from-royal-blue-light to-royal-blue border-2 border-royal-blue-dark rounded-sm"
         >
           {loading ? 'Resetting...' : 'Reset'}
         </button>
@@ -388,7 +540,7 @@ function DeactivateModal({ resident, onClose, onSuccess }) {
     <Modal show onClose={onClose}>
       <Modal.Header>{resident.active ? 'Deactivate' : 'Activate'}</Modal.Header>
       <Modal.Body>
-        <p className="text-sm text-gray-600">
+        <p className="text-sm text-text-muted">
           {resident.active
             ? `Deactivate ${resident.email}? They will not be able to log into the game.`
             : `Activate ${resident.email}? They will be able to log in again.`}
@@ -397,15 +549,17 @@ function DeactivateModal({ resident, onClose, onSuccess }) {
       <Modal.Footer>
         <button
           onClick={onClose}
-          className="px-5 py-2.5 text-sm font-medium text-gray-900 bg-white border border-gray-300 rounded-lg hover:bg-gray-100"
+          className="px-5 py-2.5 text-sm font-medium bg-transparent text-text-muted border-2 border-border-accent rounded-sm hover:text-text-bright"
         >
           Cancel
         </button>
         <button
           onClick={handleConfirm}
           disabled={loading}
-          className={`px-5 py-2.5 text-sm font-medium text-white rounded-lg ${
-            resident.active ? 'bg-red-600 hover:bg-red-700' : 'bg-primary-700 hover:bg-primary-800'
+          className={`px-5 py-2.5 text-sm font-medium text-white rounded-sm ${
+            resident.active
+              ? 'bg-gradient-to-b from-roof-red-light to-roof-red border-2 border-[#A82518]'
+              : 'bg-gradient-to-b from-royal-blue-light to-royal-blue border-2 border-royal-blue-dark'
           }`}
         >
           {loading ? 'Saving...' : resident.active ? 'Deactivate' : 'Activate'}

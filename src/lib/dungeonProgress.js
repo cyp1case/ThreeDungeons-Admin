@@ -56,6 +56,27 @@ export function getResidentDungeonProgress(attempts, dungeons, residentId) {
 }
 
 /**
+ * @param {Array<{resident_id: string, module_id: string, outcome: string}>} attempts
+ * @param {{ id: string, questionIds: string[] }} dungeon
+ * @param {string} residentId
+ * @returns {Array<{ questionId: string, label: string, correct: number, wrong: number }>}
+ */
+export function getResidentQuestionBreakdown(attempts, dungeon, residentId) {
+  const byQuestion = {}
+  for (const a of attempts || []) {
+    if (a.resident_id !== residentId || !dungeon.questionIds.includes(a.module_id)) continue
+    if (!byQuestion[a.module_id]) byQuestion[a.module_id] = { correct: 0, wrong: 0 }
+    if (a.outcome === 'correct') byQuestion[a.module_id].correct++
+    if (a.outcome === 'incorrect') byQuestion[a.module_id].wrong++
+  }
+  return dungeon.questionIds.map((qid) => {
+    const s = byQuestion[qid] || { correct: 0, wrong: 0 }
+    const label = qid.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+    return { questionId: qid, label, correct: s.correct, wrong: s.wrong }
+  })
+}
+
+/**
  * @param {Set<string>} residentIds
  * @param {Array<{resident_id: string, module_id: string, outcome: string}>} attempts
  * @param {typeof import('./dungeonConfig').DUNGEONS} dungeons

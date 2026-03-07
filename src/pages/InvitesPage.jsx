@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useToast } from '../contexts/ToastContext'
 import { Modal } from 'flowbite-react'
+import { Card } from '../components/Card'
+import { StatusBadge } from '../components/StatusBadge'
 
 function generateCode() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
@@ -43,57 +45,60 @@ export function InvitesPage() {
 
   return (
     <>
-      <h1 className="text-2xl font-semibold text-gray-900 mb-6">Invite Codes</h1>
+      <h1
+        className="font-pixel text-base text-flag-yellow mb-6"
+        style={{ textShadow: '0 0 12px rgba(244,196,48,0.3)' }}
+      >
+        INVITE CODES
+      </h1>
 
       <div className="flex justify-end mb-4">
         <button
           onClick={() => setGenerateModalOpen(true)}
-          className="px-5 py-2.5 text-sm font-medium text-white bg-primary-700 rounded-lg hover:bg-primary-800"
+          className="px-5 py-2.5 text-sm font-medium text-white bg-gradient-to-b from-royal-blue-light to-royal-blue border-2 border-royal-blue-dark rounded-sm font-bold uppercase tracking-wider text-xs"
         >
           Generate Invite
         </button>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+      <Card className="overflow-hidden !p-0">
         {loading ? (
           <div className="p-8 space-y-3">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="h-4 bg-gray-200 rounded animate-pulse" />
+              <div key={i} className="h-4 bg-surface-inner rounded animate-pulse" />
             ))}
           </div>
         ) : (
-          <table className="w-full text-sm text-left text-gray-500">
-            <thead className="text-xs text-gray-700 uppercase bg-gray-50">
+          <table className="w-full text-sm text-left text-text-primary">
+            <thead className="text-[10px] text-text-muted uppercase tracking-wider bg-surface-inner font-bold">
               <tr>
-                <th className="px-4 py-3">Code</th>
-                <th className="px-4 py-3">Program</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Created</th>
+                <th className="px-3.5 py-2.5">Code</th>
+                <th className="px-3.5 py-2.5">Program</th>
+                <th className="px-3.5 py-2.5">Status</th>
+                <th className="px-3.5 py-2.5">Created</th>
               </tr>
             </thead>
             <tbody>
               {invites.map((inv) => (
-                <tr key={inv.id} className="border-b hover:bg-gray-50">
-                  <td className="px-4 py-3 font-mono text-sm text-gray-900">
+                <tr key={inv.id} className="border-b border-border-dark hover:bg-[rgba(29,59,142,0.1)]">
+                  <td className="px-3.5 py-2.5 font-mono text-sm text-text-bright">
                     {inv.code.length === 8
                       ? `${inv.code.slice(0, 4)}-${inv.code.slice(4)}`
                       : inv.code}
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-700">
+                  <td className="px-3.5 py-2.5 text-sm text-text-primary">
                     {inv.programName ?? '—'}
                   </td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={`px-2.5 py-0.5 text-xs font-medium rounded-full ${
-                        inv.used_at
-                          ? 'bg-gray-100 text-gray-800'
-                          : 'bg-green-100 text-green-800'
-                      }`}
-                    >
-                      {inv.used_at ? 'Used' : 'Unused'}
-                    </span>
+                  <td className="px-3.5 py-2.5">
+                    {inv.used_at ? (
+                      <span className="bg-[rgba(144,152,168,0.15)] text-text-muted border-2 border-border-accent rounded-sm px-2.5 py-0.5 text-xs font-bold">
+                        Used
+                      </span>
+                    ) : (
+                      <StatusBadge outcome="correct">Unused</StatusBadge>
+                    )}
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-500">
+                  <td className="px-3.5 py-2.5 text-sm text-text-muted">
                     {new Date(inv.created_at).toLocaleDateString('en-US', {
                       month: 'short',
                       day: 'numeric',
@@ -103,9 +108,9 @@ export function InvitesPage() {
                 </tr>
               ))}
             </tbody>
-          </table>
-        )}
-      </div>
+            </table>
+          )}
+      </Card>
 
       <GenerateInviteModal
         open={generateModalOpen}

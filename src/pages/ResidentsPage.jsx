@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import bcrypt from 'bcryptjs'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
 import { Modal, Dropdown } from 'flowbite-react'
+import { StatusBadge } from '../components/StatusBadge'
+import { Card } from '../components/Card'
 
 function generatePassword() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789'
@@ -83,7 +85,12 @@ export function ResidentsPage() {
 
   return (
     <>
-      <h1 className="text-2xl font-semibold text-gray-900 mb-6">Residents</h1>
+      <h1
+        className="font-pixel text-base text-flag-yellow mb-6"
+        style={{ textShadow: '0 0 12px rgba(244,196,48,0.3)' }}
+      >
+        RESIDENTS
+      </h1>
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
         <div className="relative flex-1 max-w-md">
@@ -92,10 +99,10 @@ export function ResidentsPage() {
             placeholder="Search residents..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5 pl-10"
+            className="bg-surface-inner border-2 border-border-dark text-text-primary text-sm rounded-sm block w-full p-2.5 pl-10 focus:ring-royal-blue focus:border-royal-blue"
           />
           <svg
-            className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+            className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"
             fill="currentColor"
             viewBox="0 0 20 20"
           >
@@ -109,20 +116,20 @@ export function ResidentsPage() {
         <div className="flex gap-2">
           <button
             onClick={() => setCsvModalOpen(true)}
-            className="px-5 py-2.5 text-sm font-medium text-gray-900 bg-white border border-gray-300 rounded-lg hover:bg-gray-100"
+            className="px-5 py-2.5 text-sm font-medium bg-surface-inner border-2 border-border-dark text-text-primary rounded-sm hover:bg-surface-card"
           >
             Upload CSV
           </button>
           <button
             onClick={() => setAddModalOpen(true)}
-            className="px-5 py-2.5 text-sm font-medium text-white bg-primary-700 rounded-lg hover:bg-primary-800"
+            className="px-5 py-2.5 text-sm font-medium text-white bg-gradient-to-b from-royal-blue-light to-royal-blue border-2 border-royal-blue-dark rounded-sm font-bold uppercase tracking-wider text-xs"
           >
             Add Resident
           </button>
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+      <Card className="overflow-hidden !p-0">
         {loading ? (
           <div className="p-8 space-y-3">
             {[1, 2, 3].map((i) => (
@@ -135,35 +142,38 @@ export function ResidentsPage() {
           </div>
         ) : (
           <>
-            <table className="w-full text-sm text-left text-gray-500">
-              <thead className="text-xs text-gray-700 uppercase bg-gray-50">
+            <table className="w-full text-sm text-left text-text-primary">
+              <thead className="text-[10px] text-text-muted uppercase tracking-wider bg-surface-inner font-bold">
                 <tr>
-                  <th className="px-4 py-3">Name / Email</th>
-                  <th className="px-4 py-3">Cohorts</th>
-                  <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3 w-16">Actions</th>
+                  <th className="px-3.5 py-2.5">Name / Email</th>
+                  <th className="px-3.5 py-2.5">Cohorts</th>
+                  <th className="px-3.5 py-2.5">Status</th>
+                  <th className="px-3.5 py-2.5 w-16">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {paginated.map((r) => (
-                  <tr key={r.id} className="border-b hover:bg-gray-50">
-                    <td className="px-4 py-3">
-                      <div className="font-medium text-gray-900">
+                  <tr key={r.id} className="border-b border-border-dark hover:bg-[rgba(29,59,142,0.1)]">
+                    <td className="px-3.5 py-2.5">
+                      <Link
+                        to={`/residents/${r.id}`}
+                        className="font-semibold text-text-bright hover:underline"
+                      >
                         {r.display_name || r.email}
-                      </div>
-                      <div className="text-sm text-gray-500">{r.email}</div>
+                      </Link>
+                      <div className="text-sm text-text-muted">{r.email}</div>
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-500">
+                    <td className="px-3.5 py-2.5 text-sm text-text-primary">
                       {getCohortNames(r.id)}
                     </td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`px-2.5 py-0.5 text-xs font-medium rounded-full ${
-                          r.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                        }`}
-                      >
-                        {r.active ? 'Active' : 'Inactive'}
-                      </span>
+                    <td className="px-3.5 py-2.5">
+                      {r.active ? (
+                        <StatusBadge outcome="correct">Active</StatusBadge>
+                      ) : (
+                        <span className="bg-[rgba(144,152,168,0.15)] text-text-muted border-2 border-border-accent rounded-sm px-2.5 py-0.5 text-xs font-bold">
+                          Inactive
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <ResidentActions
@@ -176,8 +186,8 @@ export function ResidentsPage() {
                 ))}
               </tbody>
             </table>
-            <div className="flex items-center justify-between px-4 py-3 border-t">
-              <p className="text-sm text-gray-500">
+            <div className="flex items-center justify-between px-4 py-3 border-t border-border-dark">
+              <p className="text-sm text-text-muted">
                 Showing {(page - 1) * pageSize + 1}–
                 {Math.min(page * pageSize, filtered.length)} of {filtered.length}
               </p>
@@ -185,7 +195,7 @@ export function ResidentsPage() {
                 <button
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page <= 1}
-                  className="px-3 py-1 text-sm border rounded-lg disabled:opacity-50"
+                  className="px-3 py-1 text-sm bg-surface-inner border-2 border-border-dark text-text-muted rounded-sm disabled:opacity-50"
                 >
                   Prev
                 </button>
@@ -196,8 +206,10 @@ export function ResidentsPage() {
                     <button
                       key={p}
                       onClick={() => setPage(p)}
-                      className={`px-3 py-1 text-sm rounded-lg ${
-                        page === p ? 'bg-primary-700 text-white' : 'border'
+                      className={`px-3 py-1 text-sm rounded-sm ${
+                        page === p
+                          ? 'bg-royal-blue text-white'
+                          : 'bg-surface-inner border-2 border-border-dark text-text-muted'
                       }`}
                     >
                       {p}
@@ -207,15 +219,15 @@ export function ResidentsPage() {
                 <button
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={page >= totalPages}
-                  className="px-3 py-1 text-sm border rounded-lg disabled:opacity-50"
+                  className="px-3 py-1 text-sm bg-surface-inner border-2 border-border-dark text-text-muted rounded-sm disabled:opacity-50"
                 >
                   Next
                 </button>
               </div>
             </div>
-          </>
-        )}
-      </div>
+            </>
+          )}
+      </Card>
 
       <AddResidentModal
         open={addModalOpen}
