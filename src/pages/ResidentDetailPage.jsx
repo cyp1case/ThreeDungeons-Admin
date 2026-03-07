@@ -5,6 +5,8 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
 import { Modal } from 'flowbite-react'
+import { DUNGEONS } from '../lib/dungeonConfig'
+import { getResidentDungeonProgress } from '../lib/dungeonProgress'
 
 function generatePassword() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789'
@@ -96,6 +98,7 @@ export function ResidentDetailPage() {
   })
 
   const moduleIds = [...new Set(attempts.map((a) => a.module_id))]
+  const dungeonProgress = getResidentDungeonProgress(attempts, DUNGEONS, id)
 
   if (loading && !resident) {
     return (
@@ -172,6 +175,24 @@ export function ResidentDetailPage() {
           >
             {resident.active ? 'Deactivate' : 'Activate'}
           </button>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Dungeon Progress</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {dungeonProgress.map((d) => (
+            <div key={d.dungeonId} className="border border-gray-200 rounded-lg p-3">
+              <p className="font-medium text-gray-900 text-sm">{d.dungeonName}</p>
+              <p className="text-xs text-gray-500 mb-2">{d.topic}</p>
+              <p className="text-sm text-gray-700">
+                {d.completedQuestions} / {d.totalQuestions} complete
+              </p>
+              <p className="text-sm text-gray-600">
+                {d.completionPct}% complete · {d.wrongPct}% wrong
+              </p>
+            </div>
+          ))}
         </div>
       </div>
 

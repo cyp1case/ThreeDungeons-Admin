@@ -2,13 +2,8 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
-
-function formatModuleId(id) {
-  return id
-    .replace(/^CE_Q\d+_/, '')
-    .replace(/_/g, ' ')
-    .replace(/\b\w/g, (c) => c.toUpperCase())
-}
+import { DUNGEONS } from '../lib/dungeonConfig'
+import { getCohortDungeonMetrics } from '../lib/dungeonProgress'
 
 export function DashboardPage() {
   const { profile, isSuperAdmin } = useAuth()
@@ -50,51 +45,32 @@ export function DashboardPage() {
         .from('resident_cohorts')
         .select('resident_id, cohort_id')
 
-      const moduleIds = [...new Set(attempts?.map((a) => a.module_id) ?? [])]
-      setModules(moduleIds)
-
-      const correctByResidentModule = {}
-      attempts?.forEach((a) => {
-        const key = `${a.resident_id}:${a.module_id}`
-        if (a.outcome === 'correct') correctByResidentModule[key] = true
-      })
-
       const cohortResidents = {}
       residentCohorts?.forEach((rc) => {
         if (!cohortResidents[rc.cohort_id]) cohortResidents[rc.cohort_id] = new Set()
         cohortResidents[rc.cohort_id].add(rc.resident_id)
       })
 
+      const allResidentIds = new Set(residents?.map((r) => r.id) ?? [])
+      setModules(DUNGEONS)
+
       const rows = []
       cohorts?.forEach((c) => {
         const residentsInCohort = cohortResidents[c.id] ?? new Set()
-        const row = { cohort: c.name, cohortId: c.id, cells: {} }
-        moduleIds.forEach((mod) => {
-          const completed = [...residentsInCohort].filter(
-            (rid) => correctByResidentModule[`${rid}:${mod}`]
-          ).length
-          const pct =
-            residentsInCohort.size > 0
-              ? Math.round((completed / residentsInCohort.size) * 100)
-              : 0
-          row.cells[mod] = pct
+        const metrics = getCohortDungeonMetrics(residentsInCohort, attempts ?? [], DUNGEONS)
+        rows.push({
+          cohort: c.name,
+          cohortId: c.id,
+          cells: Object.fromEntries(metrics.map((m) => [m.dungeonId, { completionPct: m.completionPct, wrongPct: m.wrongPct }])),
         })
-        rows.push(row)
       })
 
-      const allResidents = new Set(residents?.map((r) => r.id) ?? [])
-      const allRow = { cohort: 'All Residents', cohortId: null, cells: {} }
-      moduleIds.forEach((mod) => {
-        const completed = [...allResidents].filter(
-          (rid) => correctByResidentModule[`${rid}:${mod}`]
-        ).length
-        const pct =
-          allResidents.size > 0
-            ? Math.round((completed / allResidents.size) * 100)
-            : 0
-        allRow.cells[mod] = pct
+      const allMetrics = getCohortDungeonMetrics(allResidentIds, attempts ?? [], DUNGEONS)
+      rows.push({
+        cohort: 'All Residents',
+        cohortId: null,
+        cells: Object.fromEntries(allMetrics.map((m) => [m.dungeonId, { completionPct: m.completionPct, wrongPct: m.wrongPct }])),
       })
-      rows.push(allRow)
 
       setMatrix(rows)
       setLoading(false)
@@ -111,13 +87,11 @@ export function DashboardPage() {
     )
   }
 
+  const allRow = matrix.find((r) => r.cohort === 'All Residents')
   const avgCompletion =
-    matrix.length > 0 && modules.length > 0
+    allRow && modules.length > 0
       ? Math.round(
-          matrix
-            .filter((r) => r.cohort === 'All Residents')
-            .flatMap((r) => Object.values(r.cells))
-            .reduce((a, b) => a + b, 0) / modules.length
+          Object.values(allRow.cells).reduce((a, c) => a + (c?.completionPct ?? 0), 0) / modules.length
         )
       : 0
 
@@ -157,7 +131,7 @@ export function DashboardPage() {
               <p className="text-2xl font-semibold text-gray-900">{summary.active}</p>
             </div>
             <div className="bg-white rounded-lg shadow-sm p-4">
-              <p className="text-sm text-gray-500 font-medium">Avg Completion</p>
+              <p className="text-sm text-gray-500 font-medium">Avg Dungeon Completion</p>
               <p className="text-2xl font-semibold text-gray-900">{avgCompletion}%</p>
             </div>
           </div>
@@ -171,9 +145,9 @@ export function DashboardPage() {
                 <thead className="text-xs text-gray-700 uppercase bg-gray-50">
                   <tr>
                     <th className="px-4 py-3">Cohort</th>
-                    {modules.map((mod) => (
-                      <th key={mod} className="px-4 py-3">
-                        {formatModuleId(mod)}
+                    {modules.map((d) => (
+                      <th key={d.id} className="px-4 py-3">
+                        {d.name}
                       </th>
                     ))}
                   </tr>
@@ -184,8 +158,10 @@ export function DashboardPage() {
                       <td className="px-4 py-3 font-medium text-gray-900">
                         {row.cohort}
                       </td>
-                      {modules.map((mod) => {
-                        const pct = row.cells[mod] ?? 0
+                      {modules.map((d) => {
+                        const cell = row.cells[d.id] ?? {}
+                        const pct = cell.completionPct ?? 0
+                        const wrongPct = cell.wrongPct ?? 0
                         const badgeClass =
                           pct >= 80
                             ? 'bg-green-100 text-green-800'
@@ -193,12 +169,17 @@ export function DashboardPage() {
                             ? 'bg-amber-100 text-amber-800'
                             : 'bg-red-100 text-red-800'
                         return (
-                          <td key={mod} className="px-4 py-3">
-                            <span
-                              className={`px-2.5 py-0.5 text-xs font-medium rounded-full ${badgeClass}`}
-                            >
-                              {pct}%
-                            </span>
+                          <td key={d.id} className="px-4 py-3">
+                            <div>
+                              <span
+                                className={`px-2.5 py-0.5 text-xs font-medium rounded-full ${badgeClass}`}
+                              >
+                                {pct}% complete
+                              </span>
+                              <p className="text-xs text-gray-500 mt-1">
+                                {wrongPct}% wrong
+                              </p>
+                            </div>
                           </td>
                         )
                       })}
