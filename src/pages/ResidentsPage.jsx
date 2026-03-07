@@ -16,14 +16,15 @@ function generatePassword() {
 }
 
 export function ResidentsPage() {
-  const { profile } = useAuth()
-  const { effectiveProgramId } = useSelectedProgram()
+  const { profile, isSuperAdmin } = useAuth()
+  const { effectiveProgramId, programs } = useSelectedProgram()
   const { showToast } = useToast()
   const [residents, setResidents] = useState([])
   const [cohorts, setCohorts] = useState([])
   const [residentCohorts, setResidentCohorts] = useState({})
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
+  const [programFilter, setProgramFilter] = useState('')
   const [page, setPage] = useState(1)
   const [addModalOpen, setAddModalOpen] = useState(false)
   const [csvModalOpen, setCsvModalOpen] = useState(false)
@@ -32,27 +33,30 @@ export function ResidentsPage() {
   const [resetResultModal, setResetResultModal] = useState(null)
 
   const pageSize = 10
+  const isSuper = isSuperAdmin()
+  const canView = isSuper || effectiveProgramId
 
   useEffect(() => {
-    if (!effectiveProgramId) {
+    if (!canView) {
       setLoading(false)
       return
     }
     fetchResidents()
     fetchCohorts()
-  }, [effectiveProgramId])
+  }, [effectiveProgramId, isSuper])
 
   async function fetchResidents() {
-    if (!effectiveProgramId) return
-    const programId = effectiveProgramId
-    console.log('[ResidentsPage] fetchResidents start', programId)
+    if (!canView) return
+    const programId = isSuper ? null : effectiveProgramId
+    console.log('[ResidentsPage] fetchResidents start', programId ?? 'all')
     setLoading(true)
     const t0 = performance.now()
-    const { data, error } = await supabase
+    let query = supabase
       .from('residents')
-      .select('*')
-      .eq('program_id', programId)
+      .select('*, programs(name)')
       .order('created_at', { ascending: false })
+    if (programId) query = query.eq('program_id', programId)
+    const { data, error } = await query
     console.log('[ResidentsPage] residents query', {
       ms: Math.round(performance.now() - t0),
       count: data?.length ?? 0,
@@ -84,28 +88,19 @@ export function ResidentsPage() {
   }
 
   async function fetchCohorts() {
-    if (!effectiveProgramId) return
-    const programId = effectiveProgramId
-    console.log('[ResidentsPage] fetchCohorts start', programId)
-    const t0 = performance.now()
-    const { data, error } = await supabase
-      .from('cohorts')
-      .select('id, name')
-      .eq('program_id', programId)
-    console.log('[ResidentsPage] cohorts query', {
-      ms: Math.round(performance.now() - t0),
-      count: data?.length ?? 0,
-      error: error?.message ?? null,
-    })
+    if (!canView) return
+    let query = supabase.from('cohorts').select('id, name, program_id')
+    if (!isSuper) query = query.eq('program_id', effectiveProgramId)
+    const { data, error } = await query
     setCohorts(data ?? [])
   }
 
-  const filtered = residents.filter(
-    (r) =>
-      !search ||
-      r.email?.toLowerCase().includes(search.toLowerCase()) ||
-      r.display_name?.toLowerCase().includes(search.toLowerCase())
-  )
+  const filtered = residents.filter((r) => {
+    if (search && !r.email?.toLowerCase().includes(search.toLowerCase()) && !r.display_name?.toLowerCase().includes(search.toLowerCase()))
+      return false
+    if (isSuper && programFilter && r.program_id !== programFilter) return false
+    return true
+  })
   const totalPages = Math.ceil(filtered.length / pageSize) || 1
   const paginated = filtered.slice((page - 1) * pageSize, page * pageSize)
 
@@ -128,7 +123,7 @@ export function ResidentsPage() {
     )
   }
 
-  if (profile && !effectiveProgramId) {
+  if (profile && !canView) {
     return <SelectProgramPrompt context="residents" />
   }
 
@@ -137,36 +132,59 @@ export function ResidentsPage() {
       <h1 className="text-2xl font-semibold text-gray-900 mb-6">Residents</h1>
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
-        <div className="relative flex-1 max-w-md">
-          <input
-            type="text"
-            placeholder="Search residents..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5 pl-10"
-          />
-          <svg
-            className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-            fill="currentColor"
-            viewBox="0 0 20 20"
-          >
-            <path
-              fillRule="evenodd"
-              d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
-              clipRule="evenodd"
+        <div className="flex flex-wrap items-center gap-2 flex-1">
+          <div className="relative flex-1 min-w-[200px] max-w-md">
+            <input
+              type="text"
+              placeholder="Search residents..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5 pl-10"
             />
-          </svg>
+            <svg
+              className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                fillRule="evenodd"
+                d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
+                clipRule="evenodd"
+              />
+            </svg>
+          </div>
+          {isSuper && programs.length > 0 && (
+            <select
+              value={programFilter}
+              onChange={(e) => {
+                setProgramFilter(e.target.value)
+                setPage(1)
+              }}
+              className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 p-2.5"
+            >
+              <option value="">All programs</option>
+              {programs.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
         <div className="flex gap-2">
           <button
-            onClick={() => setCsvModalOpen(true)}
-            className="px-5 py-2.5 text-sm font-medium text-gray-900 bg-white border border-gray-300 rounded-lg hover:bg-gray-100"
+            onClick={() => effectiveProgramId && setCsvModalOpen(true)}
+            disabled={isSuper && !effectiveProgramId}
+            title={isSuper && !effectiveProgramId ? 'Select a program to add residents' : ''}
+            className="px-5 py-2.5 text-sm font-medium text-gray-900 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Upload CSV
           </button>
           <button
-            onClick={() => setAddModalOpen(true)}
-            className="px-5 py-2.5 text-sm font-medium text-white bg-primary-700 rounded-lg hover:bg-primary-800"
+            onClick={() => effectiveProgramId && setAddModalOpen(true)}
+            disabled={isSuper && !effectiveProgramId}
+            title={isSuper && !effectiveProgramId ? 'Select a program to add residents' : ''}
+            className="px-5 py-2.5 text-sm font-medium text-white bg-primary-700 rounded-lg hover:bg-primary-800 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Add Resident
           </button>
@@ -190,6 +208,7 @@ export function ResidentsPage() {
               <thead className="text-xs text-gray-700 uppercase bg-gray-50">
                 <tr>
                   <th className="px-4 py-3">Name / Email</th>
+                  {isSuper && <th className="px-4 py-3">Program</th>}
                   <th className="px-4 py-3">Cohorts</th>
                   <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3 w-16">Actions</th>
@@ -198,7 +217,7 @@ export function ResidentsPage() {
               <tbody>
                 {paginated.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="px-4 py-12 text-center text-gray-500">
+                    <td colSpan={isSuper ? 5 : 4} className="px-4 py-12 text-center text-gray-500">
                       No residents yet. Add residents using the buttons above.
                     </td>
                   </tr>
@@ -211,6 +230,11 @@ export function ResidentsPage() {
                       </div>
                       <div className="text-sm text-gray-500">{r.email}</div>
                     </td>
+                    {isSuper && (
+                      <td className="px-4 py-3 text-sm text-gray-500">
+                        {r.programs?.name ?? '—'}
+                      </td>
+                    )}
                     <td className="px-4 py-3 text-sm text-gray-500">
                       {getCohortNames(r.id)}
                     </td>
