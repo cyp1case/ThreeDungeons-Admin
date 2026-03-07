@@ -3,7 +3,9 @@ import { useParams, Link } from 'react-router-dom'
 import bcrypt from 'bcryptjs'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
+import { useSelectedProgram } from '../contexts/SelectedProgramContext'
 import { useToast } from '../contexts/ToastContext'
+import { SelectProgramPrompt } from '../components/SelectProgramPrompt'
 import { Modal } from 'flowbite-react'
 
 function generatePassword() {
@@ -33,6 +35,7 @@ function formatDate(d) {
 export function ResidentDetailPage() {
   const { id } = useParams()
   const { profile } = useAuth()
+  const { effectiveProgramId } = useSelectedProgram()
   const { showToast } = useToast()
   const [resident, setResident] = useState(null)
   const [cohorts, setCohorts] = useState([])
@@ -45,9 +48,9 @@ export function ResidentDetailPage() {
   const [resetResultModal, setResetResultModal] = useState(null)
 
   useEffect(() => {
-    if (!id || !profile?.program_id) return
+    if (!id || !effectiveProgramId) return
     fetchData()
-  }, [id, profile?.program_id])
+  }, [id, effectiveProgramId])
 
   async function fetchData() {
     setLoading(true)
@@ -55,7 +58,7 @@ export function ResidentDetailPage() {
       .from('residents')
       .select('*')
       .eq('id', id)
-      .eq('program_id', profile.program_id)
+      .eq('program_id', effectiveProgramId)
       .single()
     setResident(resData)
 
@@ -96,6 +99,15 @@ export function ResidentDetailPage() {
   })
 
   const moduleIds = [...new Set(attempts.map((a) => a.module_id))]
+
+  if (profile && !effectiveProgramId) {
+    return (
+      <SelectProgramPrompt
+        context="resident details"
+        backLink={{ to: '/residents', label: 'Back to Residents' }}
+      />
+    )
+  }
 
   if (loading && !resident) {
     return (

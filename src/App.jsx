@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
 import { ToastProvider } from './contexts/ToastContext'
 import { ProtectedRoute } from './components/ProtectedRoute'
+import { SelectedProgramProvider } from './contexts/SelectedProgramContext'
 import { AdminRoute } from './components/AdminRoute'
 import { AppShell } from './components/AppShell'
 import { LoginPage } from './pages/LoginPage'
@@ -24,7 +25,9 @@ export default function App() {
             <Route
               element={
                 <ProtectedRoute>
-                  <AppShell />
+                  <SelectedProgramProvider>
+                    <AppShell />
+                  </SelectedProgramProvider>
                 </ProtectedRoute>
               }
             >

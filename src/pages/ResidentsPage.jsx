@@ -3,7 +3,9 @@ import { useNavigate } from 'react-router-dom'
 import bcrypt from 'bcryptjs'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
+import { useSelectedProgram } from '../contexts/SelectedProgramContext'
 import { useToast } from '../contexts/ToastContext'
+import { SelectProgramPrompt } from '../components/SelectProgramPrompt'
 import { Modal, Dropdown } from 'flowbite-react'
 
 function generatePassword() {
@@ -15,6 +17,7 @@ function generatePassword() {
 
 export function ResidentsPage() {
   const { profile } = useAuth()
+  const { effectiveProgramId } = useSelectedProgram()
   const { showToast } = useToast()
   const [residents, setResidents] = useState([])
   const [cohorts, setCohorts] = useState([])
@@ -31,22 +34,17 @@ export function ResidentsPage() {
   const pageSize = 10
 
   useEffect(() => {
-    console.log('[ResidentsPage] effect', {
-      hasProfile: !!profile,
-      programId: profile?.program_id ?? null,
-      role: profile?.role ?? null,
-    })
-    if (!profile?.program_id) {
-      console.log('[ResidentsPage] skip fetch: no program_id (leader needs invite; super_admin has no program)')
+    if (!effectiveProgramId) {
+      setLoading(false)
       return
     }
     fetchResidents()
     fetchCohorts()
-  }, [profile?.program_id])
+  }, [effectiveProgramId])
 
   async function fetchResidents() {
-    const programId = profile?.program_id
-    if (!programId) return
+    if (!effectiveProgramId) return
+    const programId = effectiveProgramId
     console.log('[ResidentsPage] fetchResidents start', programId)
     setLoading(true)
     const t0 = performance.now()
@@ -86,8 +84,8 @@ export function ResidentsPage() {
   }
 
   async function fetchCohorts() {
-    const programId = profile?.program_id
-    if (!programId) return
+    if (!effectiveProgramId) return
+    const programId = effectiveProgramId
     console.log('[ResidentsPage] fetchCohorts start', programId)
     const t0 = performance.now()
     const { data, error } = await supabase
@@ -119,7 +117,7 @@ export function ResidentsPage() {
       .join(', ') || '—'
   }
 
-  if (profile && profile.role === 'leader' && !profile.program_id) {
+  if (profile?.role === 'leader' && !profile?.program_id) {
     return (
       <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
         <p className="text-sm text-amber-800">
@@ -128,6 +126,10 @@ export function ResidentsPage() {
         </p>
       </div>
     )
+  }
+
+  if (profile && !effectiveProgramId) {
+    return <SelectProgramPrompt context="residents" />
   }
 
   return (
@@ -277,7 +279,7 @@ export function ResidentsPage() {
       <AddResidentModal
         open={addModalOpen}
         onClose={() => setAddModalOpen(false)}
-        programId={profile?.program_id}
+        programId={effectiveProgramId}
         cohorts={cohorts}
         onSuccess={() => {
           fetchResidents()
@@ -290,7 +292,7 @@ export function ResidentsPage() {
       <CsvUploadModal
         open={csvModalOpen}
         onClose={() => setCsvModalOpen(false)}
-        programId={profile?.program_id}
+        programId={effectiveProgramId}
         cohorts={cohorts}
         onSuccess={() => {
           fetchResidents()

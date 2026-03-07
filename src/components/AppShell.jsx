@@ -1,9 +1,12 @@
 import { useState } from 'react'
 import { Link, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { useSelectedProgram } from '../contexts/SelectedProgramContext'
 
 export function AppShell() {
   const { profile, signOut, isSuperAdmin } = useAuth()
+  const { programs, selectedProgramId, setSelectedProgramId } =
+    useSelectedProgram()
   const location = useLocation()
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
@@ -42,7 +45,21 @@ export function AppShell() {
                 ThreeDungeons
               </span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-4">
+              {isSuperAdmin() && programs.length > 0 && (
+                <select
+                  value={selectedProgramId ?? ''}
+                  onChange={(e) => setSelectedProgramId(e.target.value || null)}
+                  className="text-sm border border-gray-300 rounded-lg px-2 py-1.5 bg-white text-gray-900"
+                >
+                  <option value="">Select program...</option>
+                  {programs.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+              )}
               <span className="text-sm text-gray-500">{profile?.email}</span>
               <button
                 onClick={signOut}

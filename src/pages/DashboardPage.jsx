@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
+import { useSelectedProgram } from '../contexts/SelectedProgramContext'
+import { SelectProgramPrompt } from '../components/SelectProgramPrompt'
 
 function formatModuleId(id) {
   return id
@@ -12,20 +14,21 @@ function formatModuleId(id) {
 
 export function DashboardPage() {
   const { profile, isSuperAdmin } = useAuth()
+  const { effectiveProgramId, programs } = useSelectedProgram()
   const [loading, setLoading] = useState(true)
   const [summary, setSummary] = useState({ total: 0, active: 0 })
   const [matrix, setMatrix] = useState([])
   const [modules, setModules] = useState([])
 
   useEffect(() => {
-    if (!profile?.program_id) {
+    if (!effectiveProgramId) {
       setLoading(false)
       return
     }
 
     async function fetchData() {
       setLoading(true)
-      const programId = profile.program_id
+      const programId = effectiveProgramId
 
       const { data: residents } = await supabase
         .from('residents')
@@ -101,7 +104,7 @@ export function DashboardPage() {
     }
 
     fetchData()
-  }, [profile])
+  }, [effectiveProgramId])
 
   if (loading) {
     return (
@@ -125,15 +128,14 @@ export function DashboardPage() {
     <>
       <h1 className="text-2xl font-semibold text-gray-900 mb-6">Dashboard</h1>
 
-      {!profile?.program_id && isSuperAdmin() ? (
+      {!effectiveProgramId && isSuperAdmin() ? (
         <div className="bg-white rounded-lg shadow-sm p-6">
-          <p className="text-gray-500 text-sm py-12 text-center">
-            Create and manage programs from the{' '}
-            <Link to="/admin/programs" className="text-primary-600 hover:underline">
-              Programs
-            </Link>{' '}
-            page.
-          </p>
+          <div className="py-12 text-center">
+            <SelectProgramPrompt
+              noPrograms={programs.length === 0}
+              context="the dashboard"
+            />
+          </div>
         </div>
       ) : summary.total === 0 ? (
         <div className="bg-white rounded-lg shadow-sm p-6">

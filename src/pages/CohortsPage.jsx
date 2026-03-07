@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
+import { useSelectedProgram } from '../contexts/SelectedProgramContext'
 import { useToast } from '../contexts/ToastContext'
+import { SelectProgramPrompt } from '../components/SelectProgramPrompt'
 import { Modal } from 'flowbite-react'
 
 export function CohortsPage() {
   const { profile } = useAuth()
+  const { effectiveProgramId } = useSelectedProgram()
   const { showToast } = useToast()
   const [cohorts, setCohorts] = useState([])
   const [residents, setResidents] = useState([])
@@ -15,21 +18,16 @@ export function CohortsPage() {
   const [manageModalOpen, setManageModalOpen] = useState(null)
 
   useEffect(() => {
-    console.log('[CohortsPage] effect', {
-      hasProfile: !!profile,
-      programId: profile?.program_id ?? null,
-      role: profile?.role ?? null,
-    })
-    if (!profile?.program_id) {
-      console.log('[CohortsPage] skip fetch: no program_id (leader needs invite; super_admin has no program)')
+    if (!effectiveProgramId) {
+      setLoading(false)
       return
     }
     fetchData()
-  }, [profile?.program_id])
+  }, [effectiveProgramId])
 
   async function fetchData() {
-    const programId = profile?.program_id
-    if (!programId) return
+    if (!effectiveProgramId) return
+    const programId = effectiveProgramId
     console.log('[CohortsPage] fetchData start', programId)
     setLoading(true)
     const t0 = performance.now()
@@ -81,6 +79,10 @@ export function CohortsPage() {
     return residentCohorts[cohortId]?.size ?? 0
   }
 
+  if (profile && !effectiveProgramId) {
+    return <SelectProgramPrompt context="cohorts" />
+  }
+
   return (
     <>
       <h1 className="text-2xl font-semibold text-gray-900 mb-6">Cohorts</h1>
@@ -126,7 +128,7 @@ export function CohortsPage() {
       <CreateCohortModal
         open={createModalOpen}
         onClose={() => setCreateModalOpen(false)}
-        programId={profile?.program_id}
+        programId={effectiveProgramId}
         onSuccess={() => {
           fetchData()
           setCreateModalOpen(false)
