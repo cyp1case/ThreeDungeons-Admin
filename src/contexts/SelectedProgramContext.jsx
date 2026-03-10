@@ -11,8 +11,8 @@ const SelectedProgramContext = createContext(null)
 export function SelectedProgramProvider({ children }) {
   const { profile, isSuperAdmin } = useAuth()
   const location = useLocation()
+  const [loadedProgramId, setLoadedProgramId] = useState(null)
   const [programName, setProgramName] = useState(null)
-  const [programLoading, setProgramLoading] = useState(false)
   const [programExists, setProgramExists] = useState(true)
 
   const isSuper = isSuperAdmin()
@@ -29,35 +29,39 @@ export function SelectedProgramProvider({ children }) {
       return
     }
     let cancelled = false
-    setProgramLoading(true)
-    setProgramExists(true)
-    supabase
-      .from('programs')
-      .select('name')
-      .eq('id', programIdFromUrl)
-      .single()
-      .then(({ data, error }) => {
-        if (cancelled) return
-        if (error || !data) {
-          setProgramName(null)
-          setProgramExists(false)
-          setProgramLoading(false)
-          return
-        }
-        setProgramName(data.name)
-        setProgramExists(true)
-        setProgramLoading(false)
-      })
+    async function loadProgram() {
+      const { data, error } = await supabase
+        .from('programs')
+        .select('name')
+        .eq('id', programIdFromUrl)
+        .single()
+
+      if (cancelled) return
+
+      setLoadedProgramId(programIdFromUrl)
+      if (error || !data) {
+        setProgramName(null)
+        setProgramExists(false)
+        return
+      }
+
+      setProgramName(data.name)
+      setProgramExists(true)
+    }
+
+    loadProgram()
     return () => { cancelled = true }
   }, [programIdFromUrl])
+
+  const programLoading = isInspecting && loadedProgramId !== programIdFromUrl
 
   const linkPrefix = isInspecting && effectiveProgramId
     ? `/admin/programs/${effectiveProgramId}`
     : ''
 
-  const resolvedProgramName = isInspecting ? programName : null
+  const resolvedProgramName = isInspecting && !programLoading ? programName : null
+  const resolvedProgramExists = isInspecting ? (programLoading || programExists) : true
   const resolvedProgramLoading = isInspecting ? programLoading : false
-  const resolvedProgramExists = isInspecting ? programExists : true
 
   return (
     <SelectedProgramContext.Provider
