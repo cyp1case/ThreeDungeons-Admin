@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 
@@ -9,6 +10,22 @@ export function AuthProvider({ children }) {
   const [authLoading, setAuthLoading] = useState(true)
   const [profileLoading, setProfileLoading] = useState(false)
   const profileRequestIdRef = useRef(0)
+
+  async function fetchProfile(userId, requestId) {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, email, role, program_id')
+      .eq('id', userId)
+      .single()
+    if (profileRequestIdRef.current !== requestId) return
+    if (error) {
+      setProfile(null)
+      setProfileLoading(false)
+      return
+    }
+    setProfile(data)
+    setProfileLoading(false)
+  }
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -33,22 +50,6 @@ export function AuthProvider({ children }) {
     )
     return () => subscription.unsubscribe()
   }, [])
-
-  async function fetchProfile(userId, requestId) {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('id, email, role, program_id')
-      .eq('id', userId)
-      .single()
-    if (profileRequestIdRef.current !== requestId) return
-    if (error) {
-      setProfile(null)
-      setProfileLoading(false)
-      return
-    }
-    setProfile(data)
-    setProfileLoading(false)
-  }
 
   const isSuperAdmin = () => {
     const email = import.meta.env.VITE_SUPER_ADMIN_EMAIL

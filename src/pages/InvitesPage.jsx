@@ -19,10 +19,6 @@ export function InvitesPage() {
   const [loading, setLoading] = useState(true)
   const [generateModalOpen, setGenerateModalOpen] = useState(false)
 
-  useEffect(() => {
-    fetchData()
-  }, [])
-
   async function fetchData() {
     setLoading(true)
     const { data: progData } = await supabase.from('programs').select('id, name').order('name')
@@ -42,6 +38,10 @@ export function InvitesPage() {
     )
     setLoading(false)
   }
+
+  useEffect(() => {
+    fetchData() // eslint-disable-line react-hooks/set-state-in-effect -- data fetch
+  }, [])
 
   return (
     <>
@@ -150,6 +150,7 @@ function GenerateInviteModal({ open, onClose, programs, onSuccess, showToast }) 
   }
 
   function handleClose() {
+    if (generatedCode) onSuccess()
     setGeneratedCode(null)
     setProgramId('')
     onClose()

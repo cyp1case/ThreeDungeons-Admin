@@ -88,7 +88,6 @@ export function getCohortDungeonMetrics(residentIds, attempts, dungeons) {
   if (ids.length === 0) return dungeons.map((d) => ({ dungeonId: d.id, dungeonName: d.name, topic: d.topic, completionPct: 0, wrongPct: 0 }))
 
   return dungeons.map((d) => {
-    const total = d.questionIds.length * ids.length
     let completedCount = 0
     let wrongCount = 0
     for (const rid of ids) {

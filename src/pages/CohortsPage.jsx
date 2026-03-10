@@ -15,11 +15,6 @@ export function CohortsPage() {
   const [createModalOpen, setCreateModalOpen] = useState(false)
   const [manageModalOpen, setManageModalOpen] = useState(null)
 
-  useEffect(() => {
-    if (!profile?.program_id) return
-    fetchData()
-  }, [profile?.program_id])
-
   async function fetchData() {
     setLoading(true)
     const { data: cohortData } = await supabase
@@ -45,6 +40,11 @@ export function CohortsPage() {
     setResidentCohorts(rc)
     setLoading(false)
   }
+
+  useEffect(() => {
+    if (!profile?.program_id) return
+    fetchData() // eslint-disable-line react-hooks/set-state-in-effect -- data fetch
+  }, [profile?.program_id])
 
   function getMemberCount(cohortId) {
     return residentCohorts[cohortId]?.size ?? 0
@@ -125,7 +125,6 @@ export function CohortsPage() {
             setManageModalOpen(null)
             showToast('Members updated', 'success')
           }}
-          showToast={showToast}
         />
       )}
     </>
@@ -199,14 +198,13 @@ function ManageMembersModal({
   selectedIds,
   onClose,
   onSuccess,
-  showToast,
 }) {
   const [selected, setSelected] = useState(new Set(selectedIds))
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    setSelected(new Set(selectedIds))
+    setSelected(new Set(selectedIds)) // eslint-disable-line react-hooks/set-state-in-effect -- sync from props
   }, [cohort.id, selectedIds])
 
   const filtered = residents.filter(

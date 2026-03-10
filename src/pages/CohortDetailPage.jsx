@@ -23,11 +23,6 @@ export function CohortDetailPage() {
   const [attempts, setAttempts] = useState([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    if (!id || !profile?.program_id) return
-    fetchData()
-  }, [id, profile?.program_id])
-
   async function fetchData() {
     setLoading(true)
     const { data: cohortData } = await supabase
@@ -58,6 +53,11 @@ export function CohortDetailPage() {
     setAttempts(attemptsData ?? [])
     setLoading(false)
   }
+
+  useEffect(() => {
+    if (!id || !profile?.program_id) return
+    fetchData() // eslint-disable-line react-hooks/set-state-in-effect -- data fetch
+  }, [id, profile?.program_id])
 
   if (loading && !cohort) {
     return (

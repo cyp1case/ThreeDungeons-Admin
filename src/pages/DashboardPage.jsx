@@ -40,7 +40,7 @@ export function DashboardPage() {
   useEffect(() => {
     if (profileLoading) return
     if (!profile?.program_id) {
-      setLoading(false)
+      setLoading(false) // eslint-disable-line react-hooks/set-state-in-effect -- early exit when no program
       return
     }
 

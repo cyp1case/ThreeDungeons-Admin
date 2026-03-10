@@ -69,11 +69,6 @@ export function ResidentDetailPage() {
   const [deactivateModalOpen, setDeactivateModalOpen] = useState(false)
   const [resetResultModal, setResetResultModal] = useState(null)
 
-  useEffect(() => {
-    if (!id || !profile?.program_id) return
-    fetchData()
-  }, [id, profile?.program_id])
-
   async function fetchData() {
     setLoading(true)
     const { data: resData } = await supabase
@@ -103,6 +98,11 @@ export function ResidentDetailPage() {
     setAttempts(attemptData ?? [])
     setLoading(false)
   }
+
+  useEffect(() => {
+    if (!id || !profile?.program_id) return
+    fetchData() // eslint-disable-line react-hooks/set-state-in-effect -- data fetch
+  }, [id, profile?.program_id])
 
   const filteredAttempts = attempts.filter((a) => {
     if (moduleFilter && a.module_id !== moduleFilter) return false

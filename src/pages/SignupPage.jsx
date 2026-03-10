@@ -47,7 +47,7 @@ export function SignupPage() {
       return
     }
 
-    const { program_id, invite_id } = verifyData[0]
+    const { program_id: _program_id, invite_id } = verifyData[0]
 
     const { data: authData, error: signUpErr } = await supabase.auth.signUp({
       email,

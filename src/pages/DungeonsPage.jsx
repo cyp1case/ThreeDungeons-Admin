@@ -20,15 +20,6 @@ export function DungeonsPage() {
   const [attempts, setAttempts] = useState([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    if (profileLoading) return
-    if (!profile?.program_id) {
-      setLoading(false)
-      return
-    }
-    fetchData()
-  }, [profile?.program_id, profileLoading])
-
   async function fetchData() {
     setLoading(true)
     const { data: residentsData } = await supabase
@@ -44,6 +35,15 @@ export function DungeonsPage() {
     setAttempts(attemptsData ?? [])
     setLoading(false)
   }
+
+  useEffect(() => {
+    if (profileLoading) return
+    if (!profile?.program_id) {
+      setLoading(false)
+      return
+    }
+    fetchData() // eslint-disable-line react-hooks/set-state-in-effect -- data fetch
+  }, [profile?.program_id, profileLoading])
 
   const residentIds = new Set(residents.map((r) => r.id))
   const questionStatus = buildResidentQuestionStatus(attempts)

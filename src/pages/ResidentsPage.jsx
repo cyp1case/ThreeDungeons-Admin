@@ -32,12 +32,6 @@ export function ResidentsPage() {
 
   const pageSize = 10
 
-  useEffect(() => {
-    if (!profile?.program_id) return
-    fetchResidents()
-    fetchCohorts()
-  }, [profile?.program_id])
-
   async function fetchResidents() {
     setLoading(true)
     const { data } = await supabase
@@ -65,6 +59,12 @@ export function ResidentsPage() {
       .eq('program_id', profile.program_id)
     setCohorts(data ?? [])
   }
+
+  useEffect(() => {
+    if (!profile?.program_id) return
+    fetchResidents()
+    fetchCohorts()
+  }, [profile?.program_id])
 
   const filtered = residents.filter(
     (r) =>
@@ -317,7 +317,7 @@ function AddResidentModal({ open, onClose, programId, cohorts, onSuccess, showTo
 
   useEffect(() => {
     if (open) {
-      setEmail('')
+      setEmail('') // eslint-disable-line react-hooks/set-state-in-effect -- reset form when modal opens
       setDisplayName('')
       setPassword(generatePassword())
       setCohortIds([])
@@ -456,8 +456,8 @@ function AddResidentModal({ open, onClose, programId, cohorts, onSuccess, showTo
   )
 }
 
-function CsvUploadModal({ open, onClose, programId, cohorts, onSuccess, showToast }) {
-  const [file, setFile] = useState(null)
+function CsvUploadModal({ open, onClose, programId, cohorts: _cohorts, onSuccess, showToast }) {
+  const [, setFile] = useState(null)
   const [parsed, setParsed] = useState([])
   const [loading, setLoading] = useState(false)
   const [credentials, setCredentials] = useState([])

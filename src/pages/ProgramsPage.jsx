@@ -12,10 +12,6 @@ export function ProgramsPage() {
   const [loading, setLoading] = useState(true)
   const [createModalOpen, setCreateModalOpen] = useState(false)
 
-  useEffect(() => {
-    fetchData()
-  }, [])
-
   async function fetchData() {
     setLoading(true)
     const { data: progData } = await supabase.from('programs').select('*').order('name')
@@ -41,6 +37,10 @@ export function ProgramsPage() {
     setResidentCounts(rc)
     setLoading(false)
   }
+
+  useEffect(() => {
+    fetchData() // eslint-disable-line react-hooks/set-state-in-effect -- data fetch
+  }, [])
 
   return (
     <>
