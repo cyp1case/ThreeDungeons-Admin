@@ -75,9 +75,9 @@ jobs:
         working-directory: staging-src
         env:
           BUILD_TARGET: staging
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
-          VITE_SUPER_ADMIN_EMAIL: ${{ secrets.VITE_SUPER_ADMIN_EMAIL }}
+          VITE_SUPABASE_URL: ${{ secrets.STAGING_VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.STAGING_VITE_SUPABASE_ANON_KEY }}
+          VITE_SUPER_ADMIN_EMAIL: ${{ secrets.STAGING_VITE_SUPER_ADMIN_EMAIL }}
         run: npm run build:staging
 
       - name: Merge staging into deployment
@@ -96,3 +96,4 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
