@@ -1,26 +1,17 @@
-name: Deploy to GitHub Pages
+name: Deploy to Staging
 
 on:
-  pull_request:
-  push:
-    branches: [main]
   workflow_dispatch:
-    inputs:
-      staging_branch:
-        description: 'Branch to deploy as staging'
-        required: true
-        default: 'staging'
-        type: string
 
 jobs:
   build-and-test:
-    name: Build and Test
+    name: Build and Test Staging Branch
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout selected branch
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.inputs.staging_branch || github.ref }}
+          ref: ${{ github.ref }}
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -36,8 +27,7 @@ jobs:
         run: npm run lint
 
   deploy:
-    name: Deploy to GitHub Pages
-    if: github.event_name != 'pull_request'
+    name: Deploy to Staging
     needs: build-and-test
     runs-on: ubuntu-latest
     permissions:
@@ -71,10 +61,10 @@ jobs:
           VITE_SUPER_ADMIN_EMAIL: ${{ secrets.VITE_SUPER_ADMIN_EMAIL }}
         run: npm run build
 
-      - name: Checkout staging branch
+      - name: Checkout selected branch
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.inputs.staging_branch || 'main' }}
+          ref: ${{ github.ref }}
           path: staging-src
 
       - name: Install dependencies (staging)
@@ -91,7 +81,9 @@ jobs:
         run: npm run build:staging
 
       - name: Merge staging into deployment
-        run: cp -r staging-src/dist/staging dist/
+        run: |
+          mkdir -p dist/staging
+          cp -r staging-src/dist/staging/. dist/staging/
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
