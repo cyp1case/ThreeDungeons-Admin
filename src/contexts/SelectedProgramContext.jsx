@@ -1,63 +1,97 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useEffect, useState } from 'react'
-import { supabase } from '../lib/supabase'
-import { useAuth } from './AuthContext'
+import { createContext, useContext, useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
+import { supabase } from "../lib/supabase";
+import { useAuth } from "./AuthContext";
 
-const STORAGE_KEY = 'threedungeons-selected-program'
+const INSPECT_PATH_REGEX = /^\/admin\/programs\/([^/]+)/;
 
-const SelectedProgramContext = createContext(null)
+const SelectedProgramContext = createContext(null);
 
 export function SelectedProgramProvider({ children }) {
-  const { profile, isSuperAdmin } = useAuth()
-  const [programs, setPrograms] = useState([])
-  const [selectedProgramId, setSelectedProgramIdState] = useState(null)
+  const { profile, isSuperAdmin } = useAuth();
+  const location = useLocation();
+  const [loadedProgramId, setLoadedProgramId] = useState(null);
+  const [programName, setProgramName] = useState(null);
+  const [programExists, setProgramExists] = useState(true);
 
-  const isSuper = isSuperAdmin()
+  const isSuper = isSuperAdmin();
+  const programIdFromUrl = (location.pathname.match(INSPECT_PATH_REGEX) ??
+    [])[1];
+
+  const effectiveProgramId =
+    isSuper && programIdFromUrl
+      ? programIdFromUrl
+      : (profile?.program_id ?? null);
+
+  const isInspecting = isSuper && !!programIdFromUrl;
 
   useEffect(() => {
-    if (!isSuper) return
-    let cancelled = false
-    supabase
-      .from('programs')
-      .select('id, name')
-      .order('name')
-      .then(({ data }) => {
-        if (!cancelled && data) {
-          setPrograms(data)
-          const stored = localStorage.getItem(STORAGE_KEY)
-          const validStored = stored && data.some((p) => p.id === stored)
-          if (validStored) {
-            setSelectedProgramIdState(stored)
-          } else if (data.length > 0) {
-            const first = data[0].id
-            setSelectedProgramIdState(first)
-            localStorage.setItem(STORAGE_KEY, first)
-          }
-        }
-      })
-    return () => { cancelled = true }
-  }, [isSuper])
+    if (!programIdFromUrl) {
+      return;
+    }
+    let cancelled = false;
+    async function loadProgram() {
+      const { data, error } = await supabase
+        .from("programs")
+        .select("name")
+        .eq("id", programIdFromUrl)
+        .single();
 
-  function setSelectedProgramId(id) {
-    const val = id || null
-    setSelectedProgramIdState(val)
-    if (val) localStorage.setItem(STORAGE_KEY, val)
-    else localStorage.removeItem(STORAGE_KEY)
-  }
+      if (cancelled) return;
 
-  const effectiveProgramId = isSuper ? selectedProgramId : profile?.program_id ?? null
+      setLoadedProgramId(programIdFromUrl);
+      if (error || !data) {
+        setProgramName(null);
+        setProgramExists(false);
+        return;
+      }
+
+      setProgramName(data.name);
+      setProgramExists(true);
+    }
+
+    loadProgram();
+    return () => {
+      cancelled = true;
+    };
+  }, [programIdFromUrl]);
+
+  const programLoading = isInspecting && loadedProgramId !== programIdFromUrl;
+
+  const linkPrefix =
+    isInspecting && effectiveProgramId
+      ? `/admin/programs/${effectiveProgramId}`
+      : "";
+
+  const resolvedProgramName =
+    isInspecting && !programLoading ? programName : null;
+  const resolvedProgramExists = isInspecting
+    ? programLoading || programExists
+    : true;
+  const resolvedProgramLoading = isInspecting ? programLoading : false;
 
   return (
     <SelectedProgramContext.Provider
-      value={{ programs, selectedProgramId, setSelectedProgramId, effectiveProgramId }}
+      value={{
+        effectiveProgramId,
+        programName: resolvedProgramName,
+        isInspecting,
+        linkPrefix,
+        programLoading: resolvedProgramLoading,
+        programExists: resolvedProgramExists,
+      }}
     >
       {children}
     </SelectedProgramContext.Provider>
-  )
+  );
 }
 
 export function useSelectedProgram() {
-  const ctx = useContext(SelectedProgramContext)
-  if (!ctx) throw new Error('useSelectedProgram must be used within SelectedProgramProvider')
-  return ctx
+  const ctx = useContext(SelectedProgramContext);
+  if (!ctx)
+    throw new Error(
+      "useSelectedProgram must be used within SelectedProgramProvider",
+    );
+  return ctx;
 }

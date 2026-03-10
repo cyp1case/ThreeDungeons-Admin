@@ -1,60 +1,62 @@
-import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { supabase } from '../lib/supabase'
-import { useAuth } from '../contexts/AuthContext'
-import { useToast } from '../contexts/ToastContext'
-import { Modal } from 'flowbite-react'
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { supabase } from "../lib/supabase";
+import { useSelectedProgram } from "../contexts/SelectedProgramContext";
+import { useToast } from "../contexts/ToastContext";
+import { Modal } from "flowbite-react";
 
 export function CohortsPage() {
-  const { profile } = useAuth()
-  const { showToast } = useToast()
-  const [cohorts, setCohorts] = useState([])
-  const [residents, setResidents] = useState([])
-  const [residentCohorts, setResidentCohorts] = useState({})
-  const [loading, setLoading] = useState(true)
-  const [createModalOpen, setCreateModalOpen] = useState(false)
-  const [manageModalOpen, setManageModalOpen] = useState(null)
+  const { effectiveProgramId, linkPrefix } = useSelectedProgram();
+  const { showToast } = useToast();
+  const [cohorts, setCohorts] = useState([]);
+  const [residents, setResidents] = useState([]);
+  const [residentCohorts, setResidentCohorts] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [manageModalOpen, setManageModalOpen] = useState(null);
 
   async function fetchData() {
-    setLoading(true)
+    setLoading(true);
     const { data: cohortData } = await supabase
-      .from('cohorts')
-      .select('*')
-      .eq('program_id', profile.program_id)
-      .order('name')
-    setCohorts(cohortData ?? [])
+      .from("cohorts")
+      .select("*")
+      .eq("program_id", effectiveProgramId)
+      .order("name");
+    setCohorts(cohortData ?? []);
 
     const { data: residentData } = await supabase
-      .from('residents')
-      .select('id, email, display_name')
-      .eq('program_id', profile.program_id)
-      .eq('active', true)
-    setResidents(residentData ?? [])
+      .from("residents")
+      .select("id, email, display_name")
+      .eq("program_id", effectiveProgramId)
+      .eq("active", true);
+    setResidents(residentData ?? []);
 
-    const { data: rcData } = await supabase.from('resident_cohorts').select('resident_id, cohort_id')
-    const rc = {}
+    const { data: rcData } = await supabase
+      .from("resident_cohorts")
+      .select("resident_id, cohort_id");
+    const rc = {};
     rcData?.forEach((r) => {
-      if (!rc[r.cohort_id]) rc[r.cohort_id] = new Set()
-      rc[r.cohort_id].add(r.resident_id)
-    })
-    setResidentCohorts(rc)
-    setLoading(false)
+      if (!rc[r.cohort_id]) rc[r.cohort_id] = new Set();
+      rc[r.cohort_id].add(r.resident_id);
+    });
+    setResidentCohorts(rc);
+    setLoading(false);
   }
 
   useEffect(() => {
-    if (!profile?.program_id) return
-    fetchData() // eslint-disable-line react-hooks/set-state-in-effect -- data fetch
-  }, [profile?.program_id]) // eslint-disable-line react-hooks/exhaustive-deps -- fetch helper intentionally stable for this route
+    if (!effectiveProgramId) return;
+    fetchData(); // eslint-disable-line react-hooks/set-state-in-effect -- data fetch
+  }, [effectiveProgramId]); // eslint-disable-line react-hooks/exhaustive-deps -- fetch helper intentionally stable for this route
 
   function getMemberCount(cohortId) {
-    return residentCohorts[cohortId]?.size ?? 0
+    return residentCohorts[cohortId]?.size ?? 0;
   }
 
   return (
     <>
       <h1
         className="font-pixel text-base text-flag-yellow mb-6"
-        style={{ textShadow: '0 0 12px rgba(244,196,48,0.3)' }}
+        style={{ textShadow: "0 0 12px rgba(244,196,48,0.3)" }}
       >
         COHORTS
       </h1>
@@ -81,9 +83,12 @@ export function CohortsPage() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {cohorts.map((c) => (
-            <div key={c.id} className="bg-surface-card border-2 border-border-dark rounded-sm p-4">
+            <div
+              key={c.id}
+              className="bg-surface-card border-2 border-border-dark rounded-sm p-4"
+            >
               <Link
-                to={`/cohorts/${c.id}`}
+                to={`${linkPrefix}/cohorts/${c.id}`}
                 className="text-lg font-semibold text-text-bright hover:text-flag-yellow"
               >
                 {c.name}
@@ -105,11 +110,11 @@ export function CohortsPage() {
       <CreateCohortModal
         open={createModalOpen}
         onClose={() => setCreateModalOpen(false)}
-        programId={profile?.program_id}
+        programId={effectiveProgramId}
         onSuccess={() => {
-          fetchData()
-          setCreateModalOpen(false)
-          showToast('Cohort created', 'success')
+          fetchData();
+          setCreateModalOpen(false);
+          showToast("Cohort created", "success");
         }}
         showToast={showToast}
       />
@@ -121,37 +126,37 @@ export function CohortsPage() {
           selectedIds={Array.from(residentCohorts[manageModalOpen.id] ?? [])}
           onClose={() => setManageModalOpen(null)}
           onSuccess={() => {
-            fetchData()
-            setManageModalOpen(null)
-            showToast('Members updated', 'success')
+            fetchData();
+            setManageModalOpen(null);
+            showToast("Members updated", "success");
           }}
         />
       )}
     </>
-  )
+  );
 }
 
 function CreateCohortModal({ open, onClose, programId, onSuccess, showToast }) {
-  const [name, setName] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [name, setName] = useState("");
+  const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e) {
-    e.preventDefault()
-    if (!programId) return
-    setLoading(true)
-    const { error } = await supabase.from('cohorts').insert({
+    e.preventDefault();
+    if (!programId) return;
+    setLoading(true);
+    const { error } = await supabase.from("cohorts").insert({
       program_id: programId,
       name: name.trim(),
-    })
-    setLoading(false)
+    });
+    setLoading(false);
     if (error) {
-      showToast(error.message, 'error')
-      return
+      showToast(error.message, "error");
+      return;
     }
-    onSuccess()
+    onSuccess();
   }
 
-  if (!open) return null
+  if (!open) return null;
   return (
     <Modal show={open} onClose={onClose}>
       <Modal.Header>Create Cohort</Modal.Header>
@@ -184,12 +189,12 @@ function CreateCohortModal({ open, onClose, programId, onSuccess, showToast }) {
             disabled={loading}
             className="px-5 py-2.5 text-sm font-medium text-white bg-primary-700 rounded-lg hover:bg-primary-800"
           >
-            {loading ? 'Creating...' : 'Create'}
+            {loading ? "Creating..." : "Create"}
           </button>
         </Modal.Footer>
       </form>
     </Modal>
-  )
+  );
 }
 
 function ManageMembersModal({
@@ -199,43 +204,43 @@ function ManageMembersModal({
   onClose,
   onSuccess,
 }) {
-  const [selected, setSelected] = useState(new Set(selectedIds))
-  const [search, setSearch] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [selected, setSelected] = useState(new Set(selectedIds));
+  const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    setSelected(new Set(selectedIds)) // eslint-disable-line react-hooks/set-state-in-effect -- sync from props
-  }, [cohort.id, selectedIds])
+    setSelected(new Set(selectedIds)); // eslint-disable-line react-hooks/set-state-in-effect -- sync from props
+  }, [cohort.id, selectedIds]);
 
   const filtered = residents.filter(
     (r) =>
       !search ||
       r.email?.toLowerCase().includes(search.toLowerCase()) ||
-      r.display_name?.toLowerCase().includes(search.toLowerCase())
-  )
+      r.display_name?.toLowerCase().includes(search.toLowerCase()),
+  );
 
   async function handleSave() {
-    setLoading(true)
-    await supabase
-      .from('resident_cohorts')
-      .delete()
-      .eq('cohort_id', cohort.id)
+    setLoading(true);
+    await supabase.from("resident_cohorts").delete().eq("cohort_id", cohort.id);
     if (selected.size > 0) {
-      await supabase.from('resident_cohorts').insert(
-        [...selected].map((resident_id) => ({ resident_id, cohort_id: cohort.id }))
-      )
+      await supabase.from("resident_cohorts").insert(
+        [...selected].map((resident_id) => ({
+          resident_id,
+          cohort_id: cohort.id,
+        })),
+      );
     }
-    setLoading(false)
-    onSuccess()
+    setLoading(false);
+    onSuccess();
   }
 
   function toggle(residentId) {
     setSelected((prev) => {
-      const next = new Set(prev)
-      if (next.has(residentId)) next.delete(residentId)
-      else next.add(residentId)
-      return next
-    })
+      const next = new Set(prev);
+      if (next.has(residentId)) next.delete(residentId);
+      else next.add(residentId);
+      return next;
+    });
   }
 
   return (
@@ -280,9 +285,9 @@ function ManageMembersModal({
           disabled={loading}
           className="px-5 py-2.5 text-sm font-medium text-white bg-primary-700 rounded-lg hover:bg-primary-800"
         >
-          {loading ? 'Saving...' : 'Save'}
+          {loading ? "Saving..." : "Save"}
         </button>
       </Modal.Footer>
     </Modal>
-  )
+  );
 }

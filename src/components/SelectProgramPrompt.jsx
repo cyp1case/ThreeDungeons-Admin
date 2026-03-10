@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+import { Link } from "react-router-dom";
 
 export function SelectProgramPrompt({ noPrograms, context, backLink }) {
   return (
@@ -6,10 +6,13 @@ export function SelectProgramPrompt({ noPrograms, context, backLink }) {
       <p className="text-sm text-gray-600">
         {noPrograms ? (
           <>
-            Create and manage programs from the{' '}
-            <Link to="/admin/programs" className="text-primary-600 hover:underline">
+            Create and manage programs from the{" "}
+            <Link
+              to="/admin/programs"
+              className="text-primary-600 hover:underline"
+            >
               Programs
-            </Link>{' '}
+            </Link>{" "}
             page.
           </>
         ) : (
@@ -17,10 +20,13 @@ export function SelectProgramPrompt({ noPrograms, context, backLink }) {
         )}
       </p>
       {backLink && (
-        <Link to={backLink.to} className="text-primary-600 hover:underline mt-2 inline-block text-sm">
+        <Link
+          to={backLink.to}
+          className="text-primary-600 hover:underline mt-2 inline-block text-sm"
+        >
           {backLink.label}
         </Link>
       )}
     </div>
-  )
+  );
 }

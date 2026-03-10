@@ -1,20 +1,20 @@
-import { Navigate } from 'react-router-dom'
-import { useAuth } from '../contexts/AuthContext'
+import { Navigate } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
 
 export function AdminRoute({ children }) {
-  const { session, loading, profileLoading, isSuperAdmin } = useAuth()
+  const { session, loading, profileLoading, isSuperAdmin } = useAuth();
 
   if (loading || (session && profileLoading)) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="w-8 h-8 border-4 border-gray-200 border-t-primary-700 rounded-full animate-spin" />
       </div>
-    )
+    );
   }
 
   if (!session || !isSuperAdmin()) {
-    return <Navigate to="/" replace />
+    return <Navigate to="/" replace />;
   }
 
-  return children
+  return children;
 }

@@ -17,7 +17,7 @@ DECLARE
   v_program_id UUID := 'a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d';
   v_leader_id UUID := 'b2c3d4e5-f6a7-5b6c-9d0e-1f2a3b4c5d6e';
   v_super_id UUID := 'c3d4e5f6-a7b8-6c7d-0e1f-2a3b4c5d6e7f';
-  v_encrypted_pw TEXT := crypt('password', gen_salt('bf'));
+  v_encrypted_pw TEXT := extensions.crypt('password', extensions.gen_salt('bf'));
 BEGIN
   -- 1. Leader: Program.Director@ThreeDungeons.com
   INSERT INTO auth.users (
@@ -111,15 +111,15 @@ ON CONFLICT (id) DO NOTHING;
 -- Password for all: 'password'
 INSERT INTO residents (id, program_id, email, password_hash, display_name, active)
 VALUES
-  ('11111111-1111-4111-8111-111111111111', 'a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d', 'Alex.Chen@ThreeDungeons.com', crypt('password', gen_salt('bf')), 'Alex Chen', true),
-  ('22222222-2222-4222-8222-222222222222', 'a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d', 'Maya.Johnson@ThreeDungeons.com', crypt('password', gen_salt('bf')), 'Maya Johnson', true),
-  ('33333333-3333-4333-8333-333333333333', 'a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d', 'Jordan.Kim@ThreeDungeons.com', crypt('password', gen_salt('bf')), 'Jordan Kim', true),
-  ('44444444-4444-4444-8444-444444444444', 'a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d', 'Sam.Rivera@ThreeDungeons.com', crypt('password', gen_salt('bf')), 'Sam Rivera', true),
-  ('55555555-5555-4555-8555-555555555555', 'a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d', 'Taylor.Brooks@ThreeDungeons.com', crypt('password', gen_salt('bf')), 'Taylor Brooks', true),
-  ('66666666-6666-4666-8666-666666666666', 'a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d', 'Casey.Morgan@ThreeDungeons.com', crypt('password', gen_salt('bf')), 'Casey Morgan', true),
-  ('77777777-7777-4777-8777-777777777777', 'a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d', 'Quinn.Davis@ThreeDungeons.com', crypt('password', gen_salt('bf')), 'Quinn Davis', true),
-  ('88888888-8888-4888-8888-888888888888', 'a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d', 'Riley.Lee@ThreeDungeons.com', crypt('password', gen_salt('bf')), 'Riley Lee', true),
-  ('99999999-9999-4999-8999-999999999999', 'a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d', 'Avery.Smith@ThreeDungeons.com', crypt('password', gen_salt('bf')), 'Avery Smith', true)
+  ('11111111-1111-4111-8111-111111111111', 'a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d', 'Alex.Chen@ThreeDungeons.com', extensions.crypt('password', extensions.gen_salt('bf')), 'Alex Chen', true),
+  ('22222222-2222-4222-8222-222222222222', 'a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d', 'Maya.Johnson@ThreeDungeons.com', extensions.crypt('password', extensions.gen_salt('bf')), 'Maya Johnson', true),
+  ('33333333-3333-4333-8333-333333333333', 'a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d', 'Jordan.Kim@ThreeDungeons.com', extensions.crypt('password', extensions.gen_salt('bf')), 'Jordan Kim', true),
+  ('44444444-4444-4444-8444-444444444444', 'a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d', 'Sam.Rivera@ThreeDungeons.com', extensions.crypt('password', extensions.gen_salt('bf')), 'Sam Rivera', true),
+  ('55555555-5555-4555-8555-555555555555', 'a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d', 'Taylor.Brooks@ThreeDungeons.com', extensions.crypt('password', extensions.gen_salt('bf')), 'Taylor Brooks', true),
+  ('66666666-6666-4666-8666-666666666666', 'a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d', 'Casey.Morgan@ThreeDungeons.com', extensions.crypt('password', extensions.gen_salt('bf')), 'Casey Morgan', true),
+  ('77777777-7777-4777-8777-777777777777', 'a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d', 'Quinn.Davis@ThreeDungeons.com', extensions.crypt('password', extensions.gen_salt('bf')), 'Quinn Davis', true),
+  ('88888888-8888-4888-8888-888888888888', 'a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d', 'Riley.Lee@ThreeDungeons.com', extensions.crypt('password', extensions.gen_salt('bf')), 'Riley Lee', true),
+  ('99999999-9999-4999-8999-999999999999', 'a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d', 'Avery.Smith@ThreeDungeons.com', extensions.crypt('password', extensions.gen_salt('bf')), 'Avery Smith', true)
 ON CONFLICT (program_id, email) DO NOTHING;
 
 -- Link residents to cohorts
