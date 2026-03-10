@@ -14,13 +14,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Create PR if not exists
+      - name: Create PR if no open PR exists
         run: |
-          if ! gh pr view --repo ${{ github.repository }} 2>/dev/null; then
+          EXISTING=$(gh pr list --head ${{ github.ref_name }} --base main --state open --repo ${{ github.repository }})
+          if [ -z "$EXISTING" ]; then
             gh pr create \
               --title "PR: ${{ github.ref_name }}" \
               --body "Auto-created PR from branch \`${{ github.ref_name }}\`" \
-              --head ${{ github.ref_name }}
+              --head ${{ github.ref_name }} \
+              --base main
           fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
