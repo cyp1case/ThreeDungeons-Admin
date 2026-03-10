@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
@@ -10,23 +10,17 @@ export function LoginPage() {
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
   const { session, loading: authLoading } = useAuth()
-  console.log('[LoginPage] render', { authLoading, hasSession: !!session })
-
-  useEffect(() => {
-    if (!authLoading && session) {
-      navigate('/', { replace: true })
-    }
-  }, [authLoading, session, navigate])
 
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-gray-200 border-t-primary-700 rounded-full animate-spin" />
+      <div className="min-h-screen bg-surface-page flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-border-dark border-t-royal-blue rounded-full animate-spin" />
       </div>
     )
   }
 
   if (session) {
+    navigate('/', { replace: true })
     return null
   }
 
@@ -40,42 +34,44 @@ export function LoginPage() {
       setError(err.message || 'Invalid login credentials')
       return
     }
-    console.log('[LoginPage] signIn success, navigating to /')
     navigate('/')
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <div className="bg-white rounded-lg shadow-sm p-6 sm:p-8 w-full max-w-md mx-4">
-        <h1 className="text-2xl font-semibold text-gray-900 text-center">
-          ThreeDungeons
+    <div className="min-h-screen bg-surface-page flex items-center justify-center">
+      <div className="bg-surface-card border-2 border-border-dark rounded-sm p-6 sm:p-8 w-full max-w-md mx-4 shadow-[0_4px_16px_rgba(0,0,0,0.3)]">
+        <h1
+          className="font-pixel text-xs text-flag-yellow text-center leading-relaxed"
+          style={{ textShadow: '0 0 12px rgba(244,196,48,0.3)' }}
+        >
+          THREEDUNGEONS
         </h1>
-        <p className="text-sm text-gray-500 mt-1 text-center">
+        <p className="text-sm text-text-muted mt-2 text-center">
           Sign in to your account
         </p>
         <form onSubmit={handleSubmit} className="mt-6">
           <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-900 mb-2">
+            <label className="block text-sm font-semibold text-text-primary mb-2">
               Your email
             </label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5"
+              className="bg-surface-inner border-2 border-border-dark text-text-primary text-sm rounded-sm p-2.5 block w-full focus:ring-royal-blue focus:border-royal-blue"
               placeholder="name@example.com"
               required
             />
           </div>
           <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-900 mb-2">
+            <label className="block text-sm font-semibold text-text-primary mb-2">
               Password
             </label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5"
+              className="bg-surface-inner border-2 border-border-dark text-text-primary text-sm rounded-sm p-2.5 block w-full focus:ring-royal-blue focus:border-royal-blue"
               placeholder="••••••••"
               required
             />
@@ -83,19 +79,19 @@ export function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full text-white bg-primary-700 hover:bg-primary-800 focus:ring-4 focus:ring-primary-300 font-medium rounded-lg text-sm px-5 py-2.5"
+            className="w-full text-white bg-gradient-to-b from-royal-blue-light to-royal-blue border-2 border-royal-blue-dark rounded-sm shadow-[0_0_8px_rgba(29,59,142,0.4)] font-bold uppercase tracking-wider text-sm px-5 py-2.5"
           >
             {loading ? 'Signing in...' : 'Sign in'}
           </button>
         </form>
-        <p className="text-sm text-gray-500 mt-4 text-center">
+        <p className="text-sm text-text-muted mt-4 text-center">
           Have an invite code?{' '}
-          <Link to="/signup" className="text-primary-600 hover:underline">
+          <Link to="/signup" className="text-royal-blue-light hover:underline">
             Sign up
           </Link>
         </p>
         {error && (
-          <p className="text-sm text-red-600 mt-4 text-center">{error}</p>
+          <p className="text-sm text-roof-red mt-4 text-center">{error}</p>
         )}
       </div>
     </div>

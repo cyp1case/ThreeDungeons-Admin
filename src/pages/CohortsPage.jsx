@@ -1,14 +1,12 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
-import { useSelectedProgram } from '../contexts/SelectedProgramContext'
 import { useToast } from '../contexts/ToastContext'
-import { SelectProgramPrompt } from '../components/SelectProgramPrompt'
 import { Modal } from 'flowbite-react'
 
 export function CohortsPage() {
   const { profile } = useAuth()
-  const { effectiveProgramId } = useSelectedProgram()
   const { showToast } = useToast()
   const [cohorts, setCohorts] = useState([])
   const [residents, setResidents] = useState([])
@@ -17,54 +15,23 @@ export function CohortsPage() {
   const [createModalOpen, setCreateModalOpen] = useState(false)
   const [manageModalOpen, setManageModalOpen] = useState(null)
 
-  useEffect(() => {
-    if (!effectiveProgramId) {
-      setLoading(false)
-      return
-    }
-    fetchData()
-  }, [effectiveProgramId])
-
   async function fetchData() {
-    if (!effectiveProgramId) return
-    const programId = effectiveProgramId
-    console.log('[CohortsPage] fetchData start', programId)
     setLoading(true)
-    const t0 = performance.now()
-    const { data: cohortData, error: cohortError } = await supabase
+    const { data: cohortData } = await supabase
       .from('cohorts')
       .select('*')
-      .eq('program_id', programId)
+      .eq('program_id', profile.program_id)
       .order('name')
-    console.log('[CohortsPage] cohorts query', {
-      ms: Math.round(performance.now() - t0),
-      count: cohortData?.length ?? 0,
-      error: cohortError?.message ?? null,
-    })
     setCohorts(cohortData ?? [])
 
-    const t1 = performance.now()
-    const { data: residentData, error: residentError } = await supabase
+    const { data: residentData } = await supabase
       .from('residents')
       .select('id, email, display_name')
-      .eq('program_id', programId)
+      .eq('program_id', profile.program_id)
       .eq('active', true)
-    console.log('[CohortsPage] residents query', {
-      ms: Math.round(performance.now() - t1),
-      count: residentData?.length ?? 0,
-      error: residentError?.message ?? null,
-    })
     setResidents(residentData ?? [])
 
-    const t2 = performance.now()
-    const { data: rcData, error: rcError } = await supabase
-      .from('resident_cohorts')
-      .select('resident_id, cohort_id')
-    console.log('[CohortsPage] resident_cohorts query', {
-      ms: Math.round(performance.now() - t2),
-      count: rcData?.length ?? 0,
-      error: rcError?.message ?? null,
-    })
+    const { data: rcData } = await supabase.from('resident_cohorts').select('resident_id, cohort_id')
     const rc = {}
     rcData?.forEach((r) => {
       if (!rc[r.cohort_id]) rc[r.cohort_id] = new Set()
@@ -72,25 +39,30 @@ export function CohortsPage() {
     })
     setResidentCohorts(rc)
     setLoading(false)
-    console.log('[CohortsPage] fetchData done')
   }
+
+  useEffect(() => {
+    if (!profile?.program_id) return
+    fetchData() // eslint-disable-line react-hooks/set-state-in-effect -- data fetch
+  }, [profile?.program_id])
 
   function getMemberCount(cohortId) {
     return residentCohorts[cohortId]?.size ?? 0
   }
 
-  if (profile && !effectiveProgramId) {
-    return <SelectProgramPrompt context="cohorts" />
-  }
-
   return (
     <>
-      <h1 className="text-2xl font-semibold text-gray-900 mb-6">Cohorts</h1>
+      <h1
+        className="font-pixel text-base text-flag-yellow mb-6"
+        style={{ textShadow: '0 0 12px rgba(244,196,48,0.3)' }}
+      >
+        COHORTS
+      </h1>
 
       <div className="flex justify-end mb-4">
         <button
           onClick={() => setCreateModalOpen(true)}
-          className="px-5 py-2.5 text-sm font-medium text-white bg-primary-700 rounded-lg hover:bg-primary-800"
+          className="px-5 py-2.5 text-sm font-medium text-white bg-gradient-to-b from-royal-blue-light to-royal-blue border-2 border-royal-blue-dark rounded-sm font-bold uppercase tracking-wider text-xs"
         >
           Create Cohort
         </button>
@@ -98,25 +70,30 @@ export function CohortsPage() {
 
       {loading ? (
         <div className="flex justify-center py-12">
-          <div className="w-8 h-8 border-4 border-gray-200 border-t-primary-700 rounded-full animate-spin" />
+          <div className="w-8 h-8 border-4 border-border-dark border-t-royal-blue rounded-full animate-spin" />
         </div>
       ) : cohorts.length === 0 ? (
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <p className="text-gray-500 text-sm py-12 text-center">
+        <div className="bg-surface-card border-2 border-border-dark rounded-sm p-6">
+          <p className="text-text-muted text-sm py-12 text-center">
             No cohorts yet. Create one to group your residents.
           </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {cohorts.map((c) => (
-            <div key={c.id} className="bg-white rounded-lg shadow-sm p-4">
-              <h3 className="text-lg font-semibold text-gray-900">{c.name}</h3>
-              <p className="text-sm text-gray-500 mt-1">
+            <div key={c.id} className="bg-surface-card border-2 border-border-dark rounded-sm p-4">
+              <Link
+                to={`/cohorts/${c.id}`}
+                className="text-lg font-semibold text-text-bright hover:text-flag-yellow"
+              >
+                {c.name}
+              </Link>
+              <p className="text-sm text-text-muted mt-1">
                 {getMemberCount(c.id)} residents
               </p>
               <button
                 onClick={() => setManageModalOpen(c)}
-                className="text-sm text-primary-600 hover:underline mt-4 inline-block"
+                className="text-sm text-royal-blue-light hover:underline mt-4 inline-block"
               >
                 Manage Members
               </button>
@@ -128,7 +105,7 @@ export function CohortsPage() {
       <CreateCohortModal
         open={createModalOpen}
         onClose={() => setCreateModalOpen(false)}
-        programId={effectiveProgramId}
+        programId={profile?.program_id}
         onSuccess={() => {
           fetchData()
           setCreateModalOpen(false)
@@ -148,7 +125,6 @@ export function CohortsPage() {
             setManageModalOpen(null)
             showToast('Members updated', 'success')
           }}
-          showToast={showToast}
         />
       )}
     </>
@@ -222,14 +198,13 @@ function ManageMembersModal({
   selectedIds,
   onClose,
   onSuccess,
-  showToast,
 }) {
   const [selected, setSelected] = useState(new Set(selectedIds))
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    setSelected(new Set(selectedIds))
+    setSelected(new Set(selectedIds)) // eslint-disable-line react-hooks/set-state-in-effect -- sync from props
   }, [cohort.id, selectedIds])
 
   const filtered = residents.filter(

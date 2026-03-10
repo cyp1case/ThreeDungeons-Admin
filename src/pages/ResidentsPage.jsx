@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import bcrypt from 'bcryptjs'
+import { Link, useNavigate } from 'react-router-dom'
+import { hashSync } from 'bcrypt-ts/browser'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
-import { useSelectedProgram } from '../contexts/SelectedProgramContext'
 import { useToast } from '../contexts/ToastContext'
-import { SelectProgramPrompt } from '../components/SelectProgramPrompt'
 import { Modal, Dropdown } from 'flowbite-react'
+import { StatusBadge } from '../components/StatusBadge'
+import { Card } from '../components/Card'
 
 function generatePassword() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789'
@@ -16,15 +16,13 @@ function generatePassword() {
 }
 
 export function ResidentsPage() {
-  const { profile, isSuperAdmin } = useAuth()
-  const { effectiveProgramId, programs } = useSelectedProgram()
+  const { profile } = useAuth()
   const { showToast } = useToast()
   const [residents, setResidents] = useState([])
   const [cohorts, setCohorts] = useState([])
   const [residentCohorts, setResidentCohorts] = useState({})
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
-  const [programFilter, setProgramFilter] = useState('')
   const [page, setPage] = useState(1)
   const [addModalOpen, setAddModalOpen] = useState(false)
   const [csvModalOpen, setCsvModalOpen] = useState(false)
@@ -33,74 +31,47 @@ export function ResidentsPage() {
   const [resetResultModal, setResetResultModal] = useState(null)
 
   const pageSize = 10
-  const isSuper = isSuperAdmin()
-  const canView = isSuper || effectiveProgramId
-
-  useEffect(() => {
-    if (!canView) {
-      setLoading(false)
-      return
-    }
-    fetchResidents()
-    fetchCohorts()
-  }, [effectiveProgramId, isSuper])
 
   async function fetchResidents() {
-    if (!canView) return
-    const programId = isSuper ? null : effectiveProgramId
-    console.log('[ResidentsPage] fetchResidents start', programId ?? 'all')
     setLoading(true)
-    const t0 = performance.now()
-    let query = supabase
+    const { data } = await supabase
       .from('residents')
-      .select('*, programs(name)')
+      .select('*')
+      .eq('program_id', profile.program_id)
       .order('created_at', { ascending: false })
-    if (programId) query = query.eq('program_id', programId)
-    const { data, error } = await query
-    console.log('[ResidentsPage] residents query', {
-      ms: Math.round(performance.now() - t0),
-      count: data?.length ?? 0,
-      error: error?.message ?? null,
-    })
-    if (error) {
-      showToast(`Failed to load residents: ${error.message}`, 'error')
-      setResidents([])
-    } else {
-      setResidents(data ?? [])
-    }
+    setResidents(data ?? [])
     const rc = {}
-    const t1 = performance.now()
-    const { data: rcData, error: rcError } = await supabase
+    const { data: rcData } = await supabase
       .from('resident_cohorts')
       .select('resident_id, cohort_id')
-    console.log('[ResidentsPage] resident_cohorts query', {
-      ms: Math.round(performance.now() - t1),
-      count: rcData?.length ?? 0,
-      error: rcError?.message ?? null,
-    })
     rcData?.forEach((r) => {
       if (!rc[r.resident_id]) rc[r.resident_id] = []
       rc[r.resident_id].push(r.cohort_id)
     })
     setResidentCohorts(rc)
     setLoading(false)
-    console.log('[ResidentsPage] fetchResidents done')
   }
 
   async function fetchCohorts() {
-    if (!canView) return
-    let query = supabase.from('cohorts').select('id, name, program_id')
-    if (!isSuper) query = query.eq('program_id', effectiveProgramId)
-    const { data, error } = await query
+    const { data } = await supabase
+      .from('cohorts')
+      .select('id, name')
+      .eq('program_id', profile.program_id)
     setCohorts(data ?? [])
   }
 
-  const filtered = residents.filter((r) => {
-    if (search && !r.email?.toLowerCase().includes(search.toLowerCase()) && !r.display_name?.toLowerCase().includes(search.toLowerCase()))
-      return false
-    if (isSuper && programFilter && r.program_id !== programFilter) return false
-    return true
-  })
+  useEffect(() => {
+    if (!profile?.program_id) return
+    fetchResidents() // eslint-disable-line react-hooks/set-state-in-effect -- data fetch
+    fetchCohorts()
+  }, [profile?.program_id])
+
+  const filtered = residents.filter(
+    (r) =>
+      !search ||
+      r.email?.toLowerCase().includes(search.toLowerCase()) ||
+      r.display_name?.toLowerCase().includes(search.toLowerCase())
+  )
   const totalPages = Math.ceil(filtered.length / pageSize) || 1
   const paginated = filtered.slice((page - 1) * pageSize, page * pageSize)
 
@@ -112,86 +83,53 @@ export function ResidentsPage() {
       .join(', ') || '—'
   }
 
-  if (profile?.role === 'leader' && !profile?.program_id) {
-    return (
-      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-        <p className="text-sm text-amber-800">
-          Your account is not linked to a program. Please sign out and sign up again with a valid
-          invite code, or contact your administrator.
-        </p>
-      </div>
-    )
-  }
-
-  if (profile && !canView) {
-    return <SelectProgramPrompt context="residents" />
-  }
-
   return (
     <>
-      <h1 className="text-2xl font-semibold text-gray-900 mb-6">Residents</h1>
+      <h1
+        className="font-pixel text-base text-flag-yellow mb-6"
+        style={{ textShadow: '0 0 12px rgba(244,196,48,0.3)' }}
+      >
+        RESIDENTS
+      </h1>
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
-        <div className="flex flex-wrap items-center gap-2 flex-1">
-          <div className="relative flex-1 min-w-[200px] max-w-md">
-            <input
-              type="text"
-              placeholder="Search residents..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5 pl-10"
+        <div className="relative flex-1 max-w-md">
+          <input
+            type="text"
+            placeholder="Search residents..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="bg-surface-inner border-2 border-border-dark text-text-primary text-sm rounded-sm block w-full p-2.5 pl-10 focus:ring-royal-blue focus:border-royal-blue"
+          />
+          <svg
+            className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"
+            fill="currentColor"
+            viewBox="0 0 20 20"
+          >
+            <path
+              fillRule="evenodd"
+              d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
+              clipRule="evenodd"
             />
-            <svg
-              className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-              fill="currentColor"
-              viewBox="0 0 20 20"
-            >
-              <path
-                fillRule="evenodd"
-                d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
-                clipRule="evenodd"
-              />
-            </svg>
-          </div>
-          {isSuper && programs.length > 0 && (
-            <select
-              value={programFilter}
-              onChange={(e) => {
-                setProgramFilter(e.target.value)
-                setPage(1)
-              }}
-              className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 p-2.5"
-            >
-              <option value="">All programs</option>
-              {programs.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
-          )}
+          </svg>
         </div>
         <div className="flex gap-2">
           <button
-            onClick={() => effectiveProgramId && setCsvModalOpen(true)}
-            disabled={isSuper && !effectiveProgramId}
-            title={isSuper && !effectiveProgramId ? 'Select a program to add residents' : ''}
-            className="px-5 py-2.5 text-sm font-medium text-gray-900 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={() => setCsvModalOpen(true)}
+            className="px-5 py-2.5 text-sm font-medium bg-surface-inner border-2 border-border-dark text-text-primary rounded-sm hover:bg-surface-card"
           >
             Upload CSV
           </button>
           <button
-            onClick={() => effectiveProgramId && setAddModalOpen(true)}
-            disabled={isSuper && !effectiveProgramId}
-            title={isSuper && !effectiveProgramId ? 'Select a program to add residents' : ''}
-            className="px-5 py-2.5 text-sm font-medium text-white bg-primary-700 rounded-lg hover:bg-primary-800 disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={() => setAddModalOpen(true)}
+            className="px-5 py-2.5 text-sm font-medium text-white bg-gradient-to-b from-royal-blue-light to-royal-blue border-2 border-royal-blue-dark rounded-sm font-bold uppercase tracking-wider text-xs"
           >
             Add Resident
           </button>
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+      <Card className="overflow-hidden !p-0">
         {loading ? (
           <div className="p-8 space-y-3">
             {[1, 2, 3].map((i) => (
@@ -204,48 +142,38 @@ export function ResidentsPage() {
           </div>
         ) : (
           <>
-            <table className="w-full text-sm text-left text-gray-500">
-              <thead className="text-xs text-gray-700 uppercase bg-gray-50">
+            <table className="w-full text-sm text-left text-text-primary">
+              <thead className="text-[10px] text-text-muted uppercase tracking-wider bg-surface-inner font-bold">
                 <tr>
-                  <th className="px-4 py-3">Name / Email</th>
-                  {isSuper && <th className="px-4 py-3">Program</th>}
-                  <th className="px-4 py-3">Cohorts</th>
-                  <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3 w-16">Actions</th>
+                  <th className="px-3.5 py-2.5">Name / Email</th>
+                  <th className="px-3.5 py-2.5">Cohorts</th>
+                  <th className="px-3.5 py-2.5">Status</th>
+                  <th className="px-3.5 py-2.5 w-16">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {paginated.length === 0 ? (
-                  <tr>
-                    <td colSpan={isSuper ? 5 : 4} className="px-4 py-12 text-center text-gray-500">
-                      No residents yet. Add residents using the buttons above.
-                    </td>
-                  </tr>
-                ) : (
-                paginated.map((r) => (
-                  <tr key={r.id} className="border-b hover:bg-gray-50">
-                    <td className="px-4 py-3">
-                      <div className="font-medium text-gray-900">
+                {paginated.map((r) => (
+                  <tr key={r.id} className="border-b border-border-dark hover:bg-[rgba(29,59,142,0.1)]">
+                    <td className="px-3.5 py-2.5">
+                      <Link
+                        to={`/residents/${r.id}`}
+                        className="font-semibold text-text-bright hover:underline"
+                      >
                         {r.display_name || r.email}
-                      </div>
-                      <div className="text-sm text-gray-500">{r.email}</div>
+                      </Link>
+                      <div className="text-sm text-text-muted">{r.email}</div>
                     </td>
-                    {isSuper && (
-                      <td className="px-4 py-3 text-sm text-gray-500">
-                        {r.programs?.name ?? '—'}
-                      </td>
-                    )}
-                    <td className="px-4 py-3 text-sm text-gray-500">
+                    <td className="px-3.5 py-2.5 text-sm text-text-primary">
                       {getCohortNames(r.id)}
                     </td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`px-2.5 py-0.5 text-xs font-medium rounded-full ${
-                          r.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                        }`}
-                      >
-                        {r.active ? 'Active' : 'Inactive'}
-                      </span>
+                    <td className="px-3.5 py-2.5">
+                      {r.active ? (
+                        <StatusBadge outcome="correct">Active</StatusBadge>
+                      ) : (
+                        <span className="bg-[rgba(144,152,168,0.15)] text-text-muted border-2 border-border-accent rounded-sm px-2.5 py-0.5 text-xs font-bold">
+                          Inactive
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <ResidentActions
@@ -255,12 +183,11 @@ export function ResidentsPage() {
                       />
                     </td>
                   </tr>
-                ))
-                )}
+                ))}
               </tbody>
             </table>
-            <div className="flex items-center justify-between px-4 py-3 border-t">
-              <p className="text-sm text-gray-500">
+            <div className="flex items-center justify-between px-4 py-3 border-t border-border-dark">
+              <p className="text-sm text-text-muted">
                 Showing {(page - 1) * pageSize + 1}–
                 {Math.min(page * pageSize, filtered.length)} of {filtered.length}
               </p>
@@ -268,7 +195,7 @@ export function ResidentsPage() {
                 <button
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page <= 1}
-                  className="px-3 py-1 text-sm border rounded-lg disabled:opacity-50"
+                  className="px-3 py-1 text-sm bg-surface-inner border-2 border-border-dark text-text-muted rounded-sm disabled:opacity-50"
                 >
                   Prev
                 </button>
@@ -279,8 +206,10 @@ export function ResidentsPage() {
                     <button
                       key={p}
                       onClick={() => setPage(p)}
-                      className={`px-3 py-1 text-sm rounded-lg ${
-                        page === p ? 'bg-primary-700 text-white' : 'border'
+                      className={`px-3 py-1 text-sm rounded-sm ${
+                        page === p
+                          ? 'bg-royal-blue text-white'
+                          : 'bg-surface-inner border-2 border-border-dark text-text-muted'
                       }`}
                     >
                       {p}
@@ -290,20 +219,20 @@ export function ResidentsPage() {
                 <button
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={page >= totalPages}
-                  className="px-3 py-1 text-sm border rounded-lg disabled:opacity-50"
+                  className="px-3 py-1 text-sm bg-surface-inner border-2 border-border-dark text-text-muted rounded-sm disabled:opacity-50"
                 >
                   Next
                 </button>
               </div>
             </div>
-          </>
-        )}
-      </div>
+            </>
+          )}
+      </Card>
 
       <AddResidentModal
         open={addModalOpen}
         onClose={() => setAddModalOpen(false)}
-        programId={effectiveProgramId}
+        programId={profile?.program_id}
         cohorts={cohorts}
         onSuccess={() => {
           fetchResidents()
@@ -316,7 +245,7 @@ export function ResidentsPage() {
       <CsvUploadModal
         open={csvModalOpen}
         onClose={() => setCsvModalOpen(false)}
-        programId={effectiveProgramId}
+        programId={profile?.program_id}
         cohorts={cohorts}
         onSuccess={() => {
           fetchResidents()
@@ -388,7 +317,7 @@ function AddResidentModal({ open, onClose, programId, cohorts, onSuccess, showTo
 
   useEffect(() => {
     if (open) {
-      setEmail('')
+      setEmail('') // eslint-disable-line react-hooks/set-state-in-effect -- reset form when modal opens
       setDisplayName('')
       setPassword(generatePassword())
       setCohortIds([])
@@ -399,7 +328,7 @@ function AddResidentModal({ open, onClose, programId, cohorts, onSuccess, showTo
     e.preventDefault()
     if (!programId) return
     setLoading(true)
-    const hash = bcrypt.hashSync(password, 10)
+    const hash = hashSync(password, 10)
     const { error } = await supabase.from('residents').insert({
       program_id: programId,
       email,
@@ -527,8 +456,8 @@ function AddResidentModal({ open, onClose, programId, cohorts, onSuccess, showTo
   )
 }
 
-function CsvUploadModal({ open, onClose, programId, cohorts, onSuccess, showToast }) {
-  const [file, setFile] = useState(null)
+function CsvUploadModal({ open, onClose, programId, cohorts: _cohorts, onSuccess, showToast }) {
+  const [, setFile] = useState(null)
   const [parsed, setParsed] = useState([])
   const [loading, setLoading] = useState(false)
   const [credentials, setCredentials] = useState([])
@@ -576,7 +505,7 @@ function CsvUploadModal({ open, onClose, programId, cohorts, onSuccess, showToas
     const creds = []
     for (const row of parsed) {
       const password = generatePassword()
-      const hash = bcrypt.hashSync(password, 10)
+      const hash = hashSync(password, 10)
       const { error } = await supabase.from('residents').insert({
         program_id: programId,
         email: row.email,
@@ -704,7 +633,7 @@ function ResetPasswordModal({ resident, onClose, onSuccess }) {
   async function handleConfirm() {
     setLoading(true)
     const newPassword = generatePassword()
-    const hash = bcrypt.hashSync(newPassword, 10)
+    const hash = hashSync(newPassword, 10)
     const { error } = await supabase
       .from('residents')
       .update({ password_hash: hash })

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useToast } from '../contexts/ToastContext'
 import { Modal } from 'flowbite-react'
+import { Card } from '../components/Card'
 
 export function ProgramsPage() {
   const { showToast } = useToast()
@@ -10,10 +11,6 @@ export function ProgramsPage() {
   const [residentCounts, setResidentCounts] = useState({})
   const [loading, setLoading] = useState(true)
   const [createModalOpen, setCreateModalOpen] = useState(false)
-
-  useEffect(() => {
-    fetchData()
-  }, [])
 
   async function fetchData() {
     setLoading(true)
@@ -41,47 +38,56 @@ export function ProgramsPage() {
     setLoading(false)
   }
 
+  useEffect(() => {
+    fetchData() // eslint-disable-line react-hooks/set-state-in-effect -- data fetch
+  }, [])
+
   return (
     <>
-      <h1 className="text-2xl font-semibold text-gray-900 mb-6">Programs</h1>
+      <h1
+        className="font-pixel text-base text-flag-yellow mb-6"
+        style={{ textShadow: '0 0 12px rgba(244,196,48,0.3)' }}
+      >
+        PROGRAMS
+      </h1>
 
       <div className="flex justify-end mb-4">
         <button
           onClick={() => setCreateModalOpen(true)}
-          className="px-5 py-2.5 text-sm font-medium text-white bg-primary-700 rounded-lg hover:bg-primary-800"
+          className="px-5 py-2.5 text-sm font-medium text-white bg-gradient-to-b from-royal-blue-light to-royal-blue border-2 border-royal-blue-dark rounded-sm font-bold uppercase tracking-wider text-xs"
         >
           Create Program
         </button>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+      <Card className="overflow-hidden !p-0">
         {loading ? (
           <div className="p-8 space-y-3">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="h-4 bg-gray-200 rounded animate-pulse" />
+              <div key={i} className="h-4 bg-surface-inner rounded animate-pulse" />
             ))}
           </div>
         ) : (
-          <table className="w-full text-sm text-left text-gray-500">
-            <thead className="text-xs text-gray-700 uppercase bg-gray-50">
+          <table className="w-full text-sm text-left text-text-primary">
+            <thead className="text-[10px] text-text-muted uppercase tracking-wider bg-surface-inner font-bold">
               <tr>
-                <th className="px-4 py-3">Program Name</th>
-                <th className="px-4 py-3">Leaders</th>
-                <th className="px-4 py-3">Residents</th>
+                <th className="px-3.5 py-2.5">Program Name</th>
+                <th className="px-3.5 py-2.5">Leaders</th>
+                <th className="px-3.5 py-2.5">Residents</th>
               </tr>
             </thead>
             <tbody>
               {programs.map((p) => (
-                <tr key={p.id} className="border-b hover:bg-gray-50">
-                  <td className="px-4 py-3 font-medium text-gray-900">{p.name}</td>
-                  <td className="px-4 py-3">{leaderCounts[p.id] ?? 0}</td>
-                  <td className="px-4 py-3">{residentCounts[p.id] ?? 0}</td>
+                <tr key={p.id} className="border-b border-border-dark hover:bg-[rgba(29,59,142,0.1)]">
+                  <td className="px-3.5 py-2.5 font-bold text-text-bright">{p.name}</td>
+                  <td className="px-3.5 py-2.5">{leaderCounts[p.id] ?? 0}</td>
+                  <td className="px-3.5 py-2.5">{residentCounts[p.id] ?? 0}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         )}
-      </div>
+      </Card>
 
       <CreateProgramModal
         open={createModalOpen}

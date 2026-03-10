@@ -2,9 +2,8 @@ import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 
 export function ProtectedRoute({ children }) {
-  const { session, profile, loading } = useAuth()
+  const { session, loading } = useAuth()
   const location = useLocation()
-  console.log('[ProtectedRoute] render', { loading, hasSession: !!session, hasProfile: !!profile })
 
   if (loading) {
     return (
@@ -14,7 +13,7 @@ export function ProtectedRoute({ children }) {
     )
   }
 
-  if (!session || !profile) {
+  if (!session) {
     return <Navigate to="/login" state={{ from: location }} replace />
   }
 

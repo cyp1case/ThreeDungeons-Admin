@@ -11,6 +11,8 @@ import { DashboardPage } from './pages/DashboardPage'
 import { ResidentsPage } from './pages/ResidentsPage'
 import { ResidentDetailPage } from './pages/ResidentDetailPage'
 import { CohortsPage } from './pages/CohortsPage'
+import { CohortDetailPage } from './pages/CohortDetailPage'
+import { DungeonsPage } from './pages/DungeonsPage'
 import { ProgramsPage } from './pages/ProgramsPage'
 import { InvitesPage } from './pages/InvitesPage'
 
@@ -35,6 +37,8 @@ export default function App() {
               <Route path="/residents" element={<ResidentsPage />} />
               <Route path="/residents/:id" element={<ResidentDetailPage />} />
               <Route path="/cohorts" element={<CohortsPage />} />
+              <Route path="/cohorts/:id" element={<CohortDetailPage />} />
+              <Route path="/dungeons" element={<DungeonsPage />} />
               <Route
                 path="/admin/programs"
                 element={
