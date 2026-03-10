@@ -15,18 +15,19 @@ function formatModuleId(id) {
 }
 
 export function DungeonsPage() {
-  const { profile } = useAuth()
+  const { profile, profileLoading } = useAuth()
   const [residents, setResidents] = useState([])
   const [attempts, setAttempts] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    if (profileLoading) return
     if (!profile?.program_id) {
       setLoading(false)
       return
     }
     fetchData()
-  }, [profile?.program_id])
+  }, [profile?.program_id, profileLoading])
 
   async function fetchData() {
     setLoading(true)

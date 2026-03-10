@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import bcrypt from 'bcryptjs'
+import { hashSync } from 'bcrypt-ts/browser'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
@@ -328,7 +328,7 @@ function AddResidentModal({ open, onClose, programId, cohorts, onSuccess, showTo
     e.preventDefault()
     if (!programId) return
     setLoading(true)
-    const hash = bcrypt.hashSync(password, 10)
+    const hash = hashSync(password, 10)
     const { error } = await supabase.from('residents').insert({
       program_id: programId,
       email,
@@ -505,7 +505,7 @@ function CsvUploadModal({ open, onClose, programId, cohorts, onSuccess, showToas
     const creds = []
     for (const row of parsed) {
       const password = generatePassword()
-      const hash = bcrypt.hashSync(password, 10)
+      const hash = hashSync(password, 10)
       const { error } = await supabase.from('residents').insert({
         program_id: programId,
         email: row.email,
@@ -633,7 +633,7 @@ function ResetPasswordModal({ resident, onClose, onSuccess }) {
   async function handleConfirm() {
     setLoading(true)
     const newPassword = generatePassword()
-    const hash = bcrypt.hashSync(newPassword, 10)
+    const hash = hashSync(newPassword, 10)
     const { error } = await supabase
       .from('residents')
       .update({ password_hash: hash })

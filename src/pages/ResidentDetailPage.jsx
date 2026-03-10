@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import bcrypt from 'bcryptjs'
+import { hashSync } from 'bcrypt-ts/browser'
 import {
   RadarChart,
   PolarGrid,
@@ -487,7 +487,7 @@ function ResetPasswordModal({ resident, onClose, onSuccess }) {
   async function handleConfirm() {
     setLoading(true)
     const newPassword = generatePassword()
-    const hash = bcrypt.hashSync(newPassword, 10)
+    const hash = hashSync(newPassword, 10)
     await supabase
       .from('residents')
       .update({ password_hash: hash })

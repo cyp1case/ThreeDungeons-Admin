@@ -28,7 +28,7 @@ import { CHART_COLORS } from '../lib/chartTheme'
 const COHORT_COLORS = [CHART_COLORS.royalBlue, CHART_COLORS.fantasyGreen, CHART_COLORS.flagYellow, CHART_COLORS.roofRed]
 
 export function DashboardPage() {
-  const { profile, isSuperAdmin } = useAuth()
+  const { profile, profileLoading, isSuperAdmin } = useAuth()
   const [loading, setLoading] = useState(true)
   const [summary, setSummary] = useState({ total: 0, active: 0 })
   const [matrix, setMatrix] = useState([])
@@ -38,6 +38,7 @@ export function DashboardPage() {
   const [cohortCount, setCohortCount] = useState(0)
 
   useEffect(() => {
+    if (profileLoading) return
     if (!profile?.program_id) {
       setLoading(false)
       return
@@ -112,7 +113,7 @@ export function DashboardPage() {
     }
 
     fetchData()
-  }, [profile])
+  }, [profile, profileLoading])
 
   if (loading) {
     return (
