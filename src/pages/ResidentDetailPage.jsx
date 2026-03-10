@@ -16,7 +16,7 @@ import {
   Bar,
 } from 'recharts'
 import { supabase } from '../lib/supabase'
-import { useAuth } from '../contexts/AuthContext'
+import { useSelectedProgram } from '../contexts/SelectedProgramContext'
 import { useToast } from '../contexts/ToastContext'
 import { Modal } from 'flowbite-react'
 import { DUNGEONS } from '../lib/dungeonConfig'
@@ -56,7 +56,7 @@ function formatDate(d) {
 
 export function ResidentDetailPage() {
   const { id } = useParams()
-  const { profile } = useAuth()
+  const { effectiveProgramId, linkPrefix, programName, isInspecting } = useSelectedProgram()
   const { showToast } = useToast()
   const [resident, setResident] = useState(null)
   const [cohorts, setCohorts] = useState([])
@@ -75,7 +75,7 @@ export function ResidentDetailPage() {
       .from('residents')
       .select('*')
       .eq('id', id)
-      .eq('program_id', profile.program_id)
+      .eq('program_id', effectiveProgramId)
       .single()
     setResident(resData)
 
@@ -100,9 +100,9 @@ export function ResidentDetailPage() {
   }
 
   useEffect(() => {
-    if (!id || !profile?.program_id) return
+    if (!id || !effectiveProgramId) return
     fetchData() // eslint-disable-line react-hooks/set-state-in-effect -- data fetch
-  }, [id, profile?.program_id]) // eslint-disable-line react-hooks/exhaustive-deps -- fetch helper intentionally stable for this route
+  }, [id, effectiveProgramId]) // eslint-disable-line react-hooks/exhaustive-deps -- fetch helper intentionally stable for this route
 
   const filteredAttempts = attempts.filter((a) => {
     if (moduleFilter && a.module_id !== moduleFilter) return false
@@ -156,7 +156,7 @@ export function ResidentDetailPage() {
     return (
       <div className="bg-surface-card border-2 border-border-dark rounded-sm p-6">
         <p className="text-text-muted">Resident not found.</p>
-        <Link to="/residents" className="text-royal-blue-light hover:underline mt-2 inline-block">
+        <Link to={`${linkPrefix}/residents`} className="text-royal-blue-light hover:underline mt-2 inline-block">
           Back to Residents
         </Link>
       </div>
@@ -166,7 +166,7 @@ export function ResidentDetailPage() {
   return (
     <>
       <nav className="text-xs text-text-muted mb-4">
-        <Link to="/residents" className="text-royal-blue-light hover:text-text-bright">
+        <Link to={`${linkPrefix}/residents`} className="text-royal-blue-light hover:text-text-bright">
           Residents
         </Link>
         <span className="mx-2">/</span>
@@ -424,6 +424,8 @@ export function ResidentDetailPage() {
       {resetModalOpen && (
         <ResetPasswordModal
           resident={resident}
+          isInspecting={isInspecting}
+          programName={programName}
           onClose={() => setResetModalOpen(false)}
           onSuccess={(newPassword) => {
             setResetModalOpen(false)
@@ -469,6 +471,8 @@ export function ResidentDetailPage() {
       {deactivateModalOpen && (
         <DeactivateModal
           resident={resident}
+          isInspecting={isInspecting}
+          programName={programName}
           onClose={() => setDeactivateModalOpen(false)}
           onSuccess={() => {
             setDeactivateModalOpen(false)
@@ -481,7 +485,7 @@ export function ResidentDetailPage() {
   )
 }
 
-function ResetPasswordModal({ resident, onClose, onSuccess }) {
+function ResetPasswordModal({ resident, isInspecting, programName, onClose, onSuccess }) {
   const [loading, setLoading] = useState(false)
 
   async function handleConfirm() {
@@ -500,6 +504,11 @@ function ResetPasswordModal({ resident, onClose, onSuccess }) {
     <Modal show onClose={onClose}>
       <Modal.Header>Reset Password</Modal.Header>
       <Modal.Body>
+        {isInspecting && programName && (
+          <div className="mb-3 p-3 bg-[rgba(244,196,48,0.08)] border border-flag-yellow rounded-sm text-sm text-flag-yellow">
+            You are modifying <strong>{programName}</strong> as a superadmin.
+          </div>
+        )}
         <p className="text-sm text-text-muted">
           Reset password for {resident.email}? They will need the new password to log in.
         </p>
@@ -523,7 +532,7 @@ function ResetPasswordModal({ resident, onClose, onSuccess }) {
   )
 }
 
-function DeactivateModal({ resident, onClose, onSuccess }) {
+function DeactivateModal({ resident, isInspecting, programName, onClose, onSuccess }) {
   const [loading, setLoading] = useState(false)
 
   async function handleConfirm() {
@@ -540,6 +549,11 @@ function DeactivateModal({ resident, onClose, onSuccess }) {
     <Modal show onClose={onClose}>
       <Modal.Header>{resident.active ? 'Deactivate' : 'Activate'}</Modal.Header>
       <Modal.Body>
+        {isInspecting && programName && (
+          <div className="mb-3 p-3 bg-[rgba(244,196,48,0.08)] border border-flag-yellow rounded-sm text-sm text-flag-yellow">
+            You are modifying <strong>{programName}</strong> as a superadmin.
+          </div>
+        )}
         <p className="text-sm text-text-muted">
           {resident.active
             ? `Deactivate ${resident.email}? They will not be able to log into the game.`

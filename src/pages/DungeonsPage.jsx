@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
+import { useSelectedProgram } from '../contexts/SelectedProgramContext'
 import { DUNGEONS } from '../lib/dungeonConfig'
 import { buildResidentQuestionStatus } from '../lib/dungeonProgress'
 import { Card } from '../components/Card'
@@ -15,7 +16,8 @@ function formatModuleId(id) {
 }
 
 export function DungeonsPage() {
-  const { profile, profileLoading } = useAuth()
+  const { profileLoading } = useAuth()
+  const { effectiveProgramId } = useSelectedProgram()
   const [residents, setResidents] = useState([])
   const [attempts, setAttempts] = useState([])
   const [loading, setLoading] = useState(true)
@@ -25,22 +27,22 @@ export function DungeonsPage() {
     const { data: residentsData } = await supabase
       .from('residents')
       .select('id')
-      .eq('program_id', profile.program_id)
+      .eq('program_id', effectiveProgramId)
     setResidents(residentsData ?? [])
 
     const { data: attemptsData } = await supabase
       .from('attempts')
       .select('resident_id, module_id, outcome')
-      .eq('program_id', profile.program_id)
+      .eq('program_id', effectiveProgramId)
     setAttempts(attemptsData ?? [])
     setLoading(false)
   }
 
   useEffect(() => {
     if (profileLoading) return
-    if (!profile?.program_id) return
+    if (!effectiveProgramId) return
     fetchData() // eslint-disable-line react-hooks/set-state-in-effect -- data fetch
-  }, [profile?.program_id, profileLoading]) // eslint-disable-line react-hooks/exhaustive-deps -- fetch helper intentionally stable for this route
+  }, [effectiveProgramId, profileLoading]) // eslint-disable-line react-hooks/exhaustive-deps -- fetch helper intentionally stable for this route
 
   const residentIds = new Set(residents.map((r) => r.id))
   const questionStatus = buildResidentQuestionStatus(attempts)

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { BarChart, Bar, CartesianGrid, XAxis, YAxis, Legend, ResponsiveContainer } from 'recharts'
 import { supabase } from '../lib/supabase'
-import { useAuth } from '../contexts/AuthContext'
+import { useSelectedProgram } from '../contexts/SelectedProgramContext'
 import { DUNGEONS } from '../lib/dungeonConfig'
 import {
   getCohortDungeonMetrics,
@@ -17,7 +17,7 @@ import { CHART_COLORS } from '../lib/chartTheme'
 
 export function CohortDetailPage() {
   const { id } = useParams()
-  const { profile } = useAuth()
+  const { effectiveProgramId, linkPrefix } = useSelectedProgram()
   const [cohort, setCohort] = useState(null)
   const [residents, setResidents] = useState([])
   const [attempts, setAttempts] = useState([])
@@ -29,7 +29,7 @@ export function CohortDetailPage() {
       .from('cohorts')
       .select('*')
       .eq('id', id)
-      .eq('program_id', profile.program_id)
+      .eq('program_id', effectiveProgramId)
       .single()
     setCohort(cohortData)
 
@@ -48,16 +48,16 @@ export function CohortDetailPage() {
     const { data: attemptsData } = await supabase
       .from('attempts')
       .select('resident_id, module_id, outcome')
-      .eq('program_id', profile.program_id)
+      .eq('program_id', effectiveProgramId)
       .in('resident_id', residentIds)
     setAttempts(attemptsData ?? [])
     setLoading(false)
   }
 
   useEffect(() => {
-    if (!id || !profile?.program_id) return
+    if (!id || !effectiveProgramId) return
     fetchData() // eslint-disable-line react-hooks/set-state-in-effect -- data fetch
-  }, [id, profile?.program_id]) // eslint-disable-line react-hooks/exhaustive-deps -- fetch helper intentionally stable for this route
+  }, [id, effectiveProgramId]) // eslint-disable-line react-hooks/exhaustive-deps -- fetch helper intentionally stable for this route
 
   if (loading && !cohort) {
     return (
@@ -71,7 +71,7 @@ export function CohortDetailPage() {
     return (
       <div className="bg-surface-card border-2 border-border-dark rounded-sm p-6">
         <p className="text-text-muted">Cohort not found.</p>
-        <Link to="/cohorts" className="text-royal-blue-light hover:underline mt-2 inline-block">
+        <Link to={`${linkPrefix}/cohorts`} className="text-royal-blue-light hover:underline mt-2 inline-block">
           Back to Cohorts
         </Link>
       </div>
@@ -124,7 +124,7 @@ export function CohortDetailPage() {
   return (
     <>
       <nav className="text-xs text-text-muted mb-4">
-        <Link to="/cohorts" className="text-royal-blue-light hover:text-text-bright">
+        <Link to={`${linkPrefix}/cohorts`} className="text-royal-blue-light hover:text-text-bright">
           Cohorts
         </Link>
         <span className="mx-2">/</span>
@@ -200,7 +200,7 @@ export function CohortDetailPage() {
                 >
                   <td className="px-3.5 py-2.5">
                     <Link
-                      to={`/residents/${row.id}`}
+                      to={`${linkPrefix}/residents/${row.id}`}
                       className="text-text-primary hover:text-text-bright font-semibold"
                     >
                       {row.name}

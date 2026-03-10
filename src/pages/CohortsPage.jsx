@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { useAuth } from '../contexts/AuthContext'
+import { useSelectedProgram } from '../contexts/SelectedProgramContext'
 import { useToast } from '../contexts/ToastContext'
 import { Modal } from 'flowbite-react'
 
 export function CohortsPage() {
-  const { profile } = useAuth()
+  const { effectiveProgramId, linkPrefix } = useSelectedProgram()
   const { showToast } = useToast()
   const [cohorts, setCohorts] = useState([])
   const [residents, setResidents] = useState([])
@@ -20,14 +20,14 @@ export function CohortsPage() {
     const { data: cohortData } = await supabase
       .from('cohorts')
       .select('*')
-      .eq('program_id', profile.program_id)
+      .eq('program_id', effectiveProgramId)
       .order('name')
     setCohorts(cohortData ?? [])
 
     const { data: residentData } = await supabase
       .from('residents')
       .select('id, email, display_name')
-      .eq('program_id', profile.program_id)
+      .eq('program_id', effectiveProgramId)
       .eq('active', true)
     setResidents(residentData ?? [])
 
@@ -42,9 +42,9 @@ export function CohortsPage() {
   }
 
   useEffect(() => {
-    if (!profile?.program_id) return
+    if (!effectiveProgramId) return
     fetchData() // eslint-disable-line react-hooks/set-state-in-effect -- data fetch
-  }, [profile?.program_id]) // eslint-disable-line react-hooks/exhaustive-deps -- fetch helper intentionally stable for this route
+  }, [effectiveProgramId]) // eslint-disable-line react-hooks/exhaustive-deps -- fetch helper intentionally stable for this route
 
   function getMemberCount(cohortId) {
     return residentCohorts[cohortId]?.size ?? 0
@@ -83,7 +83,7 @@ export function CohortsPage() {
           {cohorts.map((c) => (
             <div key={c.id} className="bg-surface-card border-2 border-border-dark rounded-sm p-4">
               <Link
-                to={`/cohorts/${c.id}`}
+                to={`${linkPrefix}/cohorts/${c.id}`}
                 className="text-lg font-semibold text-text-bright hover:text-flag-yellow"
               >
                 {c.name}
@@ -105,7 +105,7 @@ export function CohortsPage() {
       <CreateCohortModal
         open={createModalOpen}
         onClose={() => setCreateModalOpen(false)}
-        programId={profile?.program_id}
+        programId={effectiveProgramId}
         onSuccess={() => {
           fetchData()
           setCreateModalOpen(false)

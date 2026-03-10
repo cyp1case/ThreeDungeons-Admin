@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { hashSync } from 'bcrypt-ts/browser'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
+import { useSelectedProgram } from '../contexts/SelectedProgramContext'
 import { useToast } from '../contexts/ToastContext'
 import { Modal, Dropdown } from 'flowbite-react'
 import { StatusBadge } from '../components/StatusBadge'
@@ -16,8 +17,8 @@ function generatePassword() {
 }
 
 export function ResidentsPage() {
-  const { profile } = useAuth()
   const { showToast } = useToast()
+  const { effectiveProgramId, linkPrefix, programName, isInspecting } = useSelectedProgram()
   const [residents, setResidents] = useState([])
   const [cohorts, setCohorts] = useState([])
   const [residentCohorts, setResidentCohorts] = useState({})
@@ -37,7 +38,7 @@ export function ResidentsPage() {
     const { data } = await supabase
       .from('residents')
       .select('*')
-      .eq('program_id', profile.program_id)
+      .eq('program_id', effectiveProgramId)
       .order('created_at', { ascending: false })
     setResidents(data ?? [])
     const rc = {}
@@ -56,15 +57,15 @@ export function ResidentsPage() {
     const { data } = await supabase
       .from('cohorts')
       .select('id, name')
-      .eq('program_id', profile.program_id)
+      .eq('program_id', effectiveProgramId)
     setCohorts(data ?? [])
   }
 
   useEffect(() => {
-    if (!profile?.program_id) return
+    if (!effectiveProgramId) return
     fetchResidents() // eslint-disable-line react-hooks/set-state-in-effect -- data fetch
     fetchCohorts()
-  }, [profile?.program_id]) // eslint-disable-line react-hooks/exhaustive-deps -- fetch helpers intentionally stable for this route
+  }, [effectiveProgramId]) // eslint-disable-line react-hooks/exhaustive-deps -- fetch helpers intentionally stable for this route
 
   const filtered = residents.filter(
     (r) =>
@@ -156,7 +157,7 @@ export function ResidentsPage() {
                   <tr key={r.id} className="border-b border-border-dark hover:bg-[rgba(29,59,142,0.1)]">
                     <td className="px-3.5 py-2.5">
                       <Link
-                        to={`/residents/${r.id}`}
+                        to={`${linkPrefix}/residents/${r.id}`}
                         className="font-semibold text-text-bright hover:underline"
                       >
                         {r.display_name || r.email}
@@ -178,6 +179,7 @@ export function ResidentsPage() {
                     <td className="px-4 py-3">
                       <ResidentActions
                         resident={r}
+                        linkPrefix={linkPrefix}
                         onReset={() => setResetModalOpen(r)}
                         onDeactivate={() => setDeactivateModalOpen(r)}
                       />
@@ -232,7 +234,7 @@ export function ResidentsPage() {
       <AddResidentModal
         open={addModalOpen}
         onClose={() => setAddModalOpen(false)}
-        programId={profile?.program_id}
+        programId={effectiveProgramId}
         cohorts={cohorts}
         onSuccess={() => {
           fetchResidents()
@@ -245,8 +247,10 @@ export function ResidentsPage() {
       <CsvUploadModal
         open={csvModalOpen}
         onClose={() => setCsvModalOpen(false)}
-        programId={profile?.program_id}
+        programId={effectiveProgramId}
         cohorts={cohorts}
+        isInspecting={isInspecting}
+        programName={programName}
         onSuccess={() => {
           fetchResidents()
           setCsvModalOpen(false)
@@ -258,6 +262,8 @@ export function ResidentsPage() {
       {resetModalOpen && (
         <ResetPasswordModal
           resident={resetModalOpen}
+          isInspecting={isInspecting}
+          programName={programName}
           onClose={() => setResetModalOpen(null)}
           onSuccess={(newPassword) => {
             setResetModalOpen(null)
@@ -278,6 +284,8 @@ export function ResidentsPage() {
       {deactivateModalOpen && (
         <DeactivateModal
           resident={deactivateModalOpen}
+          isInspecting={isInspecting}
+          programName={programName}
           onClose={() => setDeactivateModalOpen(null)}
           onSuccess={() => {
             setDeactivateModalOpen(null)
@@ -293,11 +301,11 @@ export function ResidentsPage() {
   )
 }
 
-function ResidentActions({ resident, onReset, onDeactivate }) {
+function ResidentActions({ resident, linkPrefix, onReset, onDeactivate }) {
   const navigate = useNavigate()
   return (
     <Dropdown label="•••" dismissOnClick>
-      <Dropdown.Item onClick={() => navigate(`/residents/${resident.id}`)}>
+      <Dropdown.Item onClick={() => navigate(`${linkPrefix}/residents/${resident.id}`)}>
         View Details
       </Dropdown.Item>
       <Dropdown.Item onClick={onReset}>Reset Password</Dropdown.Item>
@@ -456,7 +464,7 @@ function AddResidentModal({ open, onClose, programId, cohorts, onSuccess, showTo
   )
 }
 
-function CsvUploadModal({ open, onClose, programId, cohorts: _cohorts, onSuccess, showToast }) {
+function CsvUploadModal({ open, onClose, programId, cohorts: _cohorts, isInspecting, programName, onSuccess, showToast }) {
   const [, setFile] = useState(null)
   const [parsed, setParsed] = useState([])
   const [loading, setLoading] = useState(false)
@@ -540,6 +548,11 @@ function CsvUploadModal({ open, onClose, programId, cohorts: _cohorts, onSuccess
     <Modal show={open} onClose={onClose} size="lg">
       <Modal.Header>Bulk Upload Residents</Modal.Header>
       <Modal.Body>
+        {isInspecting && programName && (
+          <div className="mb-3 p-3 bg-[rgba(244,196,48,0.08)] border border-flag-yellow rounded-sm text-sm text-flag-yellow">
+            You are modifying <strong>{programName}</strong> as a superadmin.
+          </div>
+        )}
         <div
           className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center"
           onDragOver={(e) => e.preventDefault()}
@@ -627,7 +640,7 @@ function CsvUploadModal({ open, onClose, programId, cohorts: _cohorts, onSuccess
   )
 }
 
-function ResetPasswordModal({ resident, onClose, onSuccess }) {
+function ResetPasswordModal({ resident, isInspecting, programName, onClose, onSuccess }) {
   const [loading, setLoading] = useState(false)
 
   async function handleConfirm() {
@@ -647,6 +660,11 @@ function ResetPasswordModal({ resident, onClose, onSuccess }) {
     <Modal show onClose={onClose}>
       <Modal.Header>Reset Password</Modal.Header>
       <Modal.Body>
+        {isInspecting && programName && (
+          <div className="mb-3 p-3 bg-[rgba(244,196,48,0.08)] border border-flag-yellow rounded-sm text-sm text-flag-yellow">
+            You are modifying <strong>{programName}</strong> as a superadmin.
+          </div>
+        )}
         <p className="text-sm text-gray-600">
           Reset password for {resident.email}? They will need the new password to log in.
         </p>
@@ -708,7 +726,7 @@ function ResetResultModal({ password, onClose, showToast }) {
   )
 }
 
-function DeactivateModal({ resident, onClose, onSuccess }) {
+function DeactivateModal({ resident, isInspecting, programName, onClose, onSuccess }) {
   const [loading, setLoading] = useState(false)
 
   async function handleConfirm() {
@@ -726,6 +744,11 @@ function DeactivateModal({ resident, onClose, onSuccess }) {
     <Modal show onClose={onClose}>
       <Modal.Header>{resident.active ? 'Deactivate' : 'Activate'}</Modal.Header>
       <Modal.Body>
+        {isInspecting && programName && (
+          <div className="mb-3 p-3 bg-[rgba(244,196,48,0.08)] border border-flag-yellow rounded-sm text-sm text-flag-yellow">
+            You are modifying <strong>{programName}</strong> as a superadmin.
+          </div>
+        )}
         <p className="text-sm text-gray-600">
           {resident.active
             ? `Deactivate ${resident.email}? They will not be able to log into the game.`

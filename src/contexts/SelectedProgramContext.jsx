@@ -1,55 +1,57 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useEffect, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from './AuthContext'
 
-const STORAGE_KEY = 'threedungeons-selected-program'
+const INSPECT_PATH_REGEX = /^\/admin\/programs\/([^/]+)/
 
 const SelectedProgramContext = createContext(null)
 
 export function SelectedProgramProvider({ children }) {
   const { profile, isSuperAdmin } = useAuth()
-  const [programs, setPrograms] = useState([])
-  const [selectedProgramId, setSelectedProgramIdState] = useState(null)
+  const location = useLocation()
+  const [programName, setProgramName] = useState(null)
 
   const isSuper = isSuperAdmin()
+  const programIdFromUrl = (location.pathname.match(INSPECT_PATH_REGEX) ?? [])[1]
+
+  const effectiveProgramId = isSuper && programIdFromUrl
+    ? programIdFromUrl
+    : profile?.program_id ?? null
+
+  const isInspecting = isSuper && !!programIdFromUrl
 
   useEffect(() => {
-    if (!isSuper) return
+    if (!programIdFromUrl) {
+      setProgramName(null)
+      return
+    }
     let cancelled = false
     supabase
       .from('programs')
-      .select('id, name')
-      .order('name')
+      .select('name')
+      .eq('id', programIdFromUrl)
+      .single()
       .then(({ data }) => {
-        if (!cancelled && data) {
-          setPrograms(data)
-          const stored = localStorage.getItem(STORAGE_KEY)
-          const validStored = stored && data.some((p) => p.id === stored)
-          if (validStored) {
-            setSelectedProgramIdState(stored)
-          } else if (data.length > 0) {
-            const first = data[0].id
-            setSelectedProgramIdState(first)
-            localStorage.setItem(STORAGE_KEY, first)
-          }
-        }
+        if (!cancelled && data) setProgramName(data.name)
+        else setProgramName(null)
       })
     return () => { cancelled = true }
-  }, [isSuper])
+  }, [programIdFromUrl])
 
-  function setSelectedProgramId(id) {
-    const val = id || null
-    setSelectedProgramIdState(val)
-    if (val) localStorage.setItem(STORAGE_KEY, val)
-    else localStorage.removeItem(STORAGE_KEY)
-  }
-
-  const effectiveProgramId = isSuper ? selectedProgramId : profile?.program_id ?? null
+  const linkPrefix = isInspecting && effectiveProgramId
+    ? `/admin/programs/${effectiveProgramId}`
+    : ''
 
   return (
     <SelectedProgramContext.Provider
-      value={{ programs, selectedProgramId, setSelectedProgramId, effectiveProgramId }}
+      value={{
+        effectiveProgramId,
+        programName: isInspecting ? programName : null,
+        isInspecting,
+        linkPrefix,
+      }}
     >
       {children}
     </SelectedProgramContext.Provider>

@@ -16,6 +16,7 @@ import {
 } from 'recharts'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
+import { useSelectedProgram } from '../contexts/SelectedProgramContext'
 import { DUNGEONS } from '../lib/dungeonConfig'
 import { getCohortDungeonMetrics, getResidentDungeonProgress } from '../lib/dungeonProgress'
 import { Card } from '../components/Card'
@@ -28,7 +29,8 @@ import { CHART_COLORS } from '../lib/chartTheme'
 const COHORT_COLORS = [CHART_COLORS.royalBlue, CHART_COLORS.fantasyGreen, CHART_COLORS.flagYellow, CHART_COLORS.roofRed]
 
 export function DashboardPage() {
-  const { profile, profileLoading, isSuperAdmin } = useAuth()
+  const { profileLoading } = useAuth()
+  const { effectiveProgramId, linkPrefix } = useSelectedProgram()
   const [loading, setLoading] = useState(true)
   const [summary, setSummary] = useState({ total: 0, active: 0 })
   const [matrix, setMatrix] = useState([])
@@ -39,14 +41,14 @@ export function DashboardPage() {
 
   useEffect(() => {
     if (profileLoading) return
-    if (!profile?.program_id) {
+    if (!effectiveProgramId) {
       setLoading(false) // eslint-disable-line react-hooks/set-state-in-effect -- early exit when no program
       return
     }
 
     async function fetchData() {
       setLoading(true)
-      const programId = profile.program_id
+      const programId = effectiveProgramId
 
       const { data: residentsData } = await supabase
         .from('residents')
@@ -113,7 +115,7 @@ export function DashboardPage() {
     }
 
     fetchData()
-  }, [profile, profileLoading])
+  }, [effectiveProgramId, profileLoading])
 
   if (loading) {
     return (
@@ -202,21 +204,11 @@ export function DashboardPage() {
         Overview of resident progress across cohorts and dungeons.
       </p>
 
-      {!profile?.program_id && isSuperAdmin() ? (
-        <div className="bg-surface-card border-2 border-border-dark rounded-sm p-6">
-          <p className="text-text-muted text-sm py-12 text-center">
-            Create and manage programs from the{' '}
-            <Link to="/admin/programs" className="text-royal-blue-light hover:underline">
-              Programs
-            </Link>{' '}
-            page.
-          </p>
-        </div>
-      ) : summary.total === 0 ? (
+      {summary.total === 0 ? (
         <div className="bg-surface-card border-2 border-border-dark rounded-sm p-6">
           <p className="text-text-muted text-sm py-12 text-center">
             No residents yet. Add residents from the{' '}
-            <Link to="/residents" className="text-royal-blue-light hover:underline">
+            <Link to={`${linkPrefix}/residents`} className="text-royal-blue-light hover:underline">
               Residents
             </Link>{' '}
             page.
@@ -372,7 +364,7 @@ export function DashboardPage() {
                       {i + 1}
                     </div>
                     <Link
-                      to={`/residents/${entry.id}`}
+                      to={`${linkPrefix}/residents/${entry.id}`}
                       className="flex-1 font-semibold text-sm text-text-primary hover:text-text-bright"
                     >
                       {entry.name}

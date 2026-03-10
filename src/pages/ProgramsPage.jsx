@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useToast } from '../contexts/ToastContext'
-import { Modal } from 'flowbite-react'
+import { Modal, Dropdown } from 'flowbite-react'
 import { Card } from '../components/Card'
 
 export function ProgramsPage() {
   const { showToast } = useToast()
+  const navigate = useNavigate()
   const [programs, setPrograms] = useState([])
   const [leaderCounts, setLeaderCounts] = useState({})
   const [residentCounts, setResidentCounts] = useState({})
@@ -74,6 +76,7 @@ export function ProgramsPage() {
                 <th className="px-3.5 py-2.5">Program Name</th>
                 <th className="px-3.5 py-2.5">Leaders</th>
                 <th className="px-3.5 py-2.5">Residents</th>
+                <th className="px-3.5 py-2.5 w-16">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -82,6 +85,13 @@ export function ProgramsPage() {
                   <td className="px-3.5 py-2.5 font-bold text-text-bright">{p.name}</td>
                   <td className="px-3.5 py-2.5">{leaderCounts[p.id] ?? 0}</td>
                   <td className="px-3.5 py-2.5">{residentCounts[p.id] ?? 0}</td>
+                  <td className="px-3.5 py-2.5">
+                    <Dropdown label="•••" dismissOnClick>
+                      <Dropdown.Item onClick={() => navigate(`/admin/programs/${p.id}/dashboard`)}>
+                        Inspect
+                      </Dropdown.Item>
+                    </Dropdown>
+                  </td>
                 </tr>
               ))}
             </tbody>

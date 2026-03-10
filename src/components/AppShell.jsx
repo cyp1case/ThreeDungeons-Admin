@@ -1,34 +1,67 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
+
+const INSPECT_PATH_REGEX = /^\/admin\/programs\/([^/]+)/
 
 export function AppShell() {
   const { profile, signOut, isSuperAdmin } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
+  const programId = (location.pathname.match(INSPECT_PATH_REGEX) ?? [])[1]
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [inspectProgramName, setInspectProgramName] = useState(null)
+
+  const isInspecting = isSuperAdmin() && programId
+
+  useEffect(() => {
+    if (!isInspecting || !programId) return
+    let cancelled = false
+    supabase
+      .from('programs')
+      .select('name')
+      .eq('id', programId)
+      .single()
+      .then(({ data }) => {
+        if (!cancelled && data) setInspectProgramName(data.name)
+      })
+    return () => { cancelled = true }
+  }, [isInspecting, programId])
 
   const handleSignOut = async () => {
     await signOut()
     navigate('/login', { replace: true })
   }
-  const location = useLocation()
-  const [sidebarOpen, setSidebarOpen] = useState(false)
 
-  const navItems = [
+  const leaderNavItems = [
     { path: '/', label: 'Dashboard' },
     { path: '/residents', label: 'Residents' },
     { path: '/cohorts', label: 'Cohorts' },
     { path: '/dungeons', label: 'Dungeons' },
   ]
 
+  const inspectNavItems = programId
+    ? [
+        { path: `/admin/programs/${programId}/dashboard`, label: 'Dashboard' },
+        { path: `/admin/programs/${programId}/residents`, label: 'Residents' },
+        { path: `/admin/programs/${programId}/cohorts`, label: 'Cohorts' },
+        { path: `/admin/programs/${programId}/dungeons`, label: 'Dungeons' },
+      ]
+    : []
+
   const adminItems = [
     { path: '/admin/programs', label: 'Programs' },
     { path: '/admin/invites', label: 'Invites' },
+    { path: '/admin/game-settings', label: 'Game Settings' },
   ]
 
   const isActive = (path) => {
-    if (path === '/') return location.pathname === '/'
+    if (path === '/') return location.pathname === '/' && !isInspecting
     return location.pathname.startsWith(path)
   }
+
+  const navItems = isInspecting ? inspectNavItems : leaderNavItems
 
   return (
     <>
@@ -69,8 +102,24 @@ export function AppShell() {
           <div className="font-sans text-[11px] font-bold uppercase tracking-[2px] text-text-muted px-3.5 pt-5 pb-2">
             Navigate
           </div>
+          {isInspecting && (
+            <>
+              <Link
+                to="/admin/programs"
+                className="block py-2 text-xs text-text-muted hover:text-text-bright mb-2"
+                onClick={() => setSidebarOpen(false)}
+              >
+                Back to Programs
+              </Link>
+              {inspectProgramName && (
+                <p className="text-[10px] text-text-muted px-3.5 mb-3 truncate">
+                  Inspecting: {inspectProgramName}
+                </p>
+              )}
+            </>
+          )}
           <ul className="space-y-1">
-            {navItems.map((item) => (
+            {(isSuperAdmin() && !isInspecting ? adminItems : navItems).map((item) => (
               <li key={item.path}>
                 <Link
                   to={item.path}
@@ -86,29 +135,6 @@ export function AppShell() {
                 </Link>
               </li>
             ))}
-            {isSuperAdmin() ? (
-              <>
-                <div className="font-sans text-[11px] font-bold uppercase tracking-[2px] text-text-muted px-3.5 pt-5 pb-2">
-                  Admin
-                </div>
-                {adminItems.map((item) => (
-                  <li key={item.path}>
-                    <Link
-                      to={item.path}
-                      className={`block py-2.5 pl-6 pr-3.5 rounded-sm font-pixel text-[9px] uppercase tracking-wider leading-relaxed ${
-                        isActive(item.path)
-                          ? 'bg-royal-blue text-flag-yellow border-2 border-royal-blue-light shadow-[0_0_12px_rgba(29,59,142,0.4)]'
-                          : 'text-text-muted border-2 border-transparent hover:bg-white/5 hover:text-text-bright hover:border-border-accent'
-                      }`}
-                      style={isActive(item.path) ? { textShadow: '0 0 8px rgba(244,196,48,0.3)' } : {}}
-                      onClick={() => setSidebarOpen(false)}
-                    >
-                      {item.label}
-                    </Link>
-                  </li>
-                ))}
-              </>
-            ) : null}
           </ul>
         </div>
         <div className="px-5 py-3 border-t border-border-dark mt-auto">
