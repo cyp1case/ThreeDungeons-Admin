@@ -44,7 +44,7 @@ export function CohortsPage() {
   useEffect(() => {
     if (!profile?.program_id) return
     fetchData() // eslint-disable-line react-hooks/set-state-in-effect -- data fetch
-  }, [profile?.program_id])
+  }, [profile?.program_id]) // eslint-disable-line react-hooks/exhaustive-deps -- fetch helper intentionally stable for this route
 
   function getMemberCount(cohortId) {
     return residentCohorts[cohortId]?.size ?? 0

@@ -57,7 +57,7 @@ export function CohortDetailPage() {
   useEffect(() => {
     if (!id || !profile?.program_id) return
     fetchData() // eslint-disable-line react-hooks/set-state-in-effect -- data fetch
-  }, [id, profile?.program_id])
+  }, [id, profile?.program_id]) // eslint-disable-line react-hooks/exhaustive-deps -- fetch helper intentionally stable for this route
 
   if (loading && !cohort) {
     return (

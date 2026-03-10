@@ -64,7 +64,7 @@ export function ResidentsPage() {
     if (!profile?.program_id) return
     fetchResidents() // eslint-disable-line react-hooks/set-state-in-effect -- data fetch
     fetchCohorts()
-  }, [profile?.program_id])
+  }, [profile?.program_id]) // eslint-disable-line react-hooks/exhaustive-deps -- fetch helpers intentionally stable for this route
 
   const filtered = residents.filter(
     (r) =>

@@ -40,7 +40,7 @@ export function DungeonsPage() {
     if (profileLoading) return
     if (!profile?.program_id) return
     fetchData() // eslint-disable-line react-hooks/set-state-in-effect -- data fetch
-  }, [profile?.program_id, profileLoading])
+  }, [profile?.program_id, profileLoading]) // eslint-disable-line react-hooks/exhaustive-deps -- fetch helper intentionally stable for this route
 
   const residentIds = new Set(residents.map((r) => r.id))
   const questionStatus = buildResidentQuestionStatus(attempts)
