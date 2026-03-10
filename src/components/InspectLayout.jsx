@@ -1,22 +1,23 @@
-import { useEffect } from 'react'
-import { Link, Outlet, useNavigate } from 'react-router-dom'
-import { useSelectedProgram } from '../contexts/SelectedProgramContext'
+import { useEffect } from "react";
+import { Link, Outlet, useNavigate } from "react-router-dom";
+import { useSelectedProgram } from "../contexts/SelectedProgramContext";
 
 export function InspectLayout() {
-  const navigate = useNavigate()
-  const { isInspecting, programExists, programLoading, programName } = useSelectedProgram()
+  const navigate = useNavigate();
+  const { isInspecting, programExists, programLoading, programName } =
+    useSelectedProgram();
 
   useEffect(() => {
-    if (!isInspecting || programLoading || programExists) return
-    navigate('/admin/programs', { replace: true })
-  }, [isInspecting, navigate, programExists, programLoading])
+    if (!isInspecting || programLoading || programExists) return;
+    navigate("/admin/programs", { replace: true });
+  }, [isInspecting, navigate, programExists, programLoading]);
 
   if (programLoading) {
     return (
       <div className="flex justify-center py-12">
         <div className="w-8 h-8 border-4 border-border-dark border-t-royal-blue rounded-full animate-spin" />
       </div>
-    )
+    );
   }
 
   return (
@@ -34,5 +35,5 @@ export function InspectLayout() {
       </div>
       <Outlet />
     </>
-  )
+  );
 }

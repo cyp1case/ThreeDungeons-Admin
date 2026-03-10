@@ -1,136 +1,160 @@
-import { useEffect, useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
-import { BarChart, Bar, CartesianGrid, XAxis, YAxis, Legend, ResponsiveContainer } from 'recharts'
-import { supabase } from '../lib/supabase'
-import { useSelectedProgram } from '../contexts/SelectedProgramContext'
-import { DUNGEONS } from '../lib/dungeonConfig'
+import { useEffect, useState } from "react";
+import { useParams, Link } from "react-router-dom";
+import {
+  BarChart,
+  Bar,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
+import { supabase } from "../lib/supabase";
+import { useSelectedProgram } from "../contexts/SelectedProgramContext";
+import { DUNGEONS } from "../lib/dungeonConfig";
 import {
   getCohortDungeonMetrics,
   getResidentDungeonProgress,
-} from '../lib/dungeonProgress'
-import { Card } from '../components/Card'
-import { CardTitle } from '../components/CardTitle'
-import { SummaryCard } from '../components/SummaryCard'
-import { CompletionBadge } from '../components/CompletionBadge'
-import { ProgressBar } from '../components/ProgressBar'
-import { CHART_COLORS } from '../lib/chartTheme'
+} from "../lib/dungeonProgress";
+import { Card } from "../components/Card";
+import { CardTitle } from "../components/CardTitle";
+import { SummaryCard } from "../components/SummaryCard";
+import { CompletionBadge } from "../components/CompletionBadge";
+import { ProgressBar } from "../components/ProgressBar";
+import { CHART_COLORS } from "../lib/chartTheme";
 
 export function CohortDetailPage() {
-  const { id } = useParams()
-  const { effectiveProgramId, linkPrefix } = useSelectedProgram()
-  const [cohort, setCohort] = useState(null)
-  const [residents, setResidents] = useState([])
-  const [attempts, setAttempts] = useState([])
-  const [loading, setLoading] = useState(true)
+  const { id } = useParams();
+  const { effectiveProgramId, linkPrefix } = useSelectedProgram();
+  const [cohort, setCohort] = useState(null);
+  const [residents, setResidents] = useState([]);
+  const [attempts, setAttempts] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   async function fetchData() {
-    setLoading(true)
+    setLoading(true);
     const { data: cohortData, error: cohortError } = await supabase
-      .from('cohorts')
-      .select('*')
-      .eq('id', id)
-      .eq('program_id', effectiveProgramId)
-      .single()
-    setCohort(cohortData)
+      .from("cohorts")
+      .select("*")
+      .eq("id", id)
+      .eq("program_id", effectiveProgramId)
+      .single();
+    setCohort(cohortData);
     if (cohortError || !cohortData) {
-      setResidents([])
-      setAttempts([])
-      setLoading(false)
-      return
+      setResidents([]);
+      setAttempts([]);
+      setLoading(false);
+      return;
     }
 
     const { data: rcData } = await supabase
-      .from('resident_cohorts')
-      .select('resident_id')
-      .eq('cohort_id', id)
-    const residentIds = rcData?.map((r) => r.resident_id) ?? []
+      .from("resident_cohorts")
+      .select("resident_id")
+      .eq("cohort_id", id);
+    const residentIds = rcData?.map((r) => r.resident_id) ?? [];
 
     const { data: residentsData } = await supabase
-      .from('residents')
-      .select('id, display_name, email')
-      .in('id', residentIds)
-    setResidents(residentsData ?? [])
+      .from("residents")
+      .select("id, display_name, email")
+      .in("id", residentIds);
+    setResidents(residentsData ?? []);
 
     const { data: attemptsData } = await supabase
-      .from('attempts')
-      .select('resident_id, module_id, outcome')
-      .eq('program_id', effectiveProgramId)
-      .in('resident_id', residentIds)
-    setAttempts(attemptsData ?? [])
-    setLoading(false)
+      .from("attempts")
+      .select("resident_id, module_id, outcome")
+      .eq("program_id", effectiveProgramId)
+      .in("resident_id", residentIds);
+    setAttempts(attemptsData ?? []);
+    setLoading(false);
   }
 
   useEffect(() => {
-    if (!id || !effectiveProgramId) return
-    fetchData() // eslint-disable-line react-hooks/set-state-in-effect -- data fetch
-  }, [id, effectiveProgramId]) // eslint-disable-line react-hooks/exhaustive-deps -- fetch helper intentionally stable for this route
+    if (!id || !effectiveProgramId) return;
+    fetchData(); // eslint-disable-line react-hooks/set-state-in-effect -- data fetch
+  }, [id, effectiveProgramId]); // eslint-disable-line react-hooks/exhaustive-deps -- fetch helper intentionally stable for this route
 
   if (loading && !cohort) {
     return (
       <div className="flex justify-center py-12">
         <div className="w-8 h-8 border-4 border-border-dark border-t-royal-blue rounded-full animate-spin" />
       </div>
-    )
+    );
   }
 
   if (!cohort) {
     return (
       <div className="bg-surface-card border-2 border-border-dark rounded-sm p-6">
         <p className="text-text-muted">Cohort not found.</p>
-        <Link to={`${linkPrefix}/cohorts`} className="text-royal-blue-light hover:underline mt-2 inline-block">
+        <Link
+          to={`${linkPrefix}/cohorts`}
+          className="text-royal-blue-light hover:underline mt-2 inline-block"
+        >
           Back to Cohorts
         </Link>
       </div>
-    )
+    );
   }
 
-  const residentIds = new Set(residents.map((r) => r.id))
-  const cohortMetrics = getCohortDungeonMetrics(residentIds, attempts, DUNGEONS)
+  const residentIds = new Set(residents.map((r) => r.id));
+  const cohortMetrics = getCohortDungeonMetrics(
+    residentIds,
+    attempts,
+    DUNGEONS,
+  );
 
   const avgCompletion =
     cohortMetrics.length > 0
       ? Math.round(
-          cohortMetrics.reduce((a, m) => a + m.completionPct, 0) / cohortMetrics.length
+          cohortMetrics.reduce((a, m) => a + m.completionPct, 0) /
+            cohortMetrics.length,
         )
-      : 0
+      : 0;
 
   const avgWrong =
     cohortMetrics.length > 0
       ? Math.round(
-          cohortMetrics.reduce((a, m) => a + m.wrongPct, 0) / cohortMetrics.length
+          cohortMetrics.reduce((a, m) => a + m.wrongPct, 0) /
+            cohortMetrics.length,
         )
-      : 0
+      : 0;
 
   const barData = cohortMetrics.map((m) => ({
-    dungeon: m.dungeonName.replace(/^The /, '').split(' ')[0],
+    dungeon: m.dungeonName.replace(/^The /, "").split(" ")[0],
     completion: m.completionPct,
     wrong: m.wrongPct,
-  }))
+  }));
 
   const residentRows = residents.map((r) => {
-    const residentAttempts = attempts.filter((a) => a.resident_id === r.id)
-    const progress = getResidentDungeonProgress(residentAttempts, DUNGEONS, r.id)
+    const residentAttempts = attempts.filter((a) => a.resident_id === r.id);
+    const progress = getResidentDungeonProgress(
+      residentAttempts,
+      DUNGEONS,
+      r.id,
+    );
     const overallPct =
       progress.length > 0
         ? Math.round(
-            progress.reduce((a, p) => a + p.completionPct, 0) / progress.length
+            progress.reduce((a, p) => a + p.completionPct, 0) / progress.length,
           )
-        : 0
+        : 0;
     const byDungeon = Object.fromEntries(
-      progress.map((p) => [p.dungeonId, p.completionPct])
-    )
+      progress.map((p) => [p.dungeonId, p.completionPct]),
+    );
     return {
       id: r.id,
       name: r.display_name || r.email,
       overallPct,
       byDungeon,
-    }
-  })
+    };
+  });
 
   return (
     <>
       <nav className="text-xs text-text-muted mb-4">
-        <Link to={`${linkPrefix}/cohorts`} className="text-royal-blue-light hover:text-text-bright">
+        <Link
+          to={`${linkPrefix}/cohorts`}
+          className="text-royal-blue-light hover:text-text-bright"
+        >
           Cohorts
         </Link>
         <span className="mx-2">/</span>
@@ -139,7 +163,7 @@ export function CohortDetailPage() {
 
       <h1
         className="font-pixel text-sm text-flag-yellow mb-6"
-        style={{ textShadow: '0 0 12px rgba(244,196,48,0.3)' }}
+        style={{ textShadow: "0 0 12px rgba(244,196,48,0.3)" }}
       >
         {cohort.name}
       </h1>
@@ -165,11 +189,14 @@ export function CohortDetailPage() {
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={barData}>
               <CartesianGrid stroke="rgba(255,255,255,0.04)" />
-              <XAxis dataKey="dungeon" tick={{ fill: '#9098A8', fontSize: 10 }} />
+              <XAxis
+                dataKey="dungeon"
+                tick={{ fill: "#9098A8", fontSize: 10 }}
+              />
               <YAxis
                 domain={[0, 100]}
                 tickFormatter={(v) => `${v}%`}
-                tick={{ fill: '#9098A8', fontSize: 10 }}
+                tick={{ fill: "#9098A8", fontSize: 10 }}
               />
               <Bar
                 dataKey="completion"
@@ -193,7 +220,7 @@ export function CohortDetailPage() {
                 <th className="px-3.5 py-2.5">Overall %</th>
                 {DUNGEONS.map((d) => (
                   <th key={d.id} className="px-3.5 py-2.5">
-                    {d.name.replace(/^The /, '').split(' ')[0]}
+                    {d.name.replace(/^The /, "").split(" ")[0]}
                   </th>
                 ))}
               </tr>
@@ -232,5 +259,5 @@ export function CohortDetailPage() {
         </div>
       </Card>
     </>
-  )
+  );
 }

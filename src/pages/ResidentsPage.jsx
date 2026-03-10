@@ -1,93 +1,97 @@
-import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { hashSync } from 'bcrypt-ts/browser'
-import { supabase } from '../lib/supabase'
-import { useSelectedProgram } from '../contexts/SelectedProgramContext'
-import { useToast } from '../contexts/ToastContext'
-import { Modal, Dropdown } from 'flowbite-react'
-import { StatusBadge } from '../components/StatusBadge'
-import { Card } from '../components/Card'
+import { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { hashSync } from "bcrypt-ts/browser";
+import { supabase } from "../lib/supabase";
+import { useSelectedProgram } from "../contexts/SelectedProgramContext";
+import { useToast } from "../contexts/ToastContext";
+import { Modal, Dropdown } from "flowbite-react";
+import { StatusBadge } from "../components/StatusBadge";
+import { Card } from "../components/Card";
 
 function generatePassword() {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789'
-  let s = ''
-  for (let i = 0; i < 8; i++) s += chars[Math.floor(Math.random() * chars.length)]
-  return s
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
+  let s = "";
+  for (let i = 0; i < 8; i++)
+    s += chars[Math.floor(Math.random() * chars.length)];
+  return s;
 }
 
 export function ResidentsPage() {
-  const { showToast } = useToast()
-  const { effectiveProgramId, linkPrefix, programName, isInspecting } = useSelectedProgram()
-  const [residents, setResidents] = useState([])
-  const [cohorts, setCohorts] = useState([])
-  const [residentCohorts, setResidentCohorts] = useState({})
-  const [loading, setLoading] = useState(true)
-  const [search, setSearch] = useState('')
-  const [page, setPage] = useState(1)
-  const [addModalOpen, setAddModalOpen] = useState(false)
-  const [csvModalOpen, setCsvModalOpen] = useState(false)
-  const [resetModalOpen, setResetModalOpen] = useState(null)
-  const [deactivateModalOpen, setDeactivateModalOpen] = useState(null)
-  const [resetResultModal, setResetResultModal] = useState(null)
+  const { showToast } = useToast();
+  const { effectiveProgramId, linkPrefix, programName, isInspecting } =
+    useSelectedProgram();
+  const [residents, setResidents] = useState([]);
+  const [cohorts, setCohorts] = useState([]);
+  const [residentCohorts, setResidentCohorts] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [addModalOpen, setAddModalOpen] = useState(false);
+  const [csvModalOpen, setCsvModalOpen] = useState(false);
+  const [resetModalOpen, setResetModalOpen] = useState(null);
+  const [deactivateModalOpen, setDeactivateModalOpen] = useState(null);
+  const [resetResultModal, setResetResultModal] = useState(null);
 
-  const pageSize = 10
+  const pageSize = 10;
 
   async function fetchResidents() {
-    setLoading(true)
+    setLoading(true);
     const { data } = await supabase
-      .from('residents')
-      .select('*')
-      .eq('program_id', effectiveProgramId)
-      .order('created_at', { ascending: false })
-    setResidents(data ?? [])
-    const rc = {}
+      .from("residents")
+      .select("*")
+      .eq("program_id", effectiveProgramId)
+      .order("created_at", { ascending: false });
+    setResidents(data ?? []);
+    const rc = {};
     const { data: rcData } = await supabase
-      .from('resident_cohorts')
-      .select('resident_id, cohort_id')
+      .from("resident_cohorts")
+      .select("resident_id, cohort_id");
     rcData?.forEach((r) => {
-      if (!rc[r.resident_id]) rc[r.resident_id] = []
-      rc[r.resident_id].push(r.cohort_id)
-    })
-    setResidentCohorts(rc)
-    setLoading(false)
+      if (!rc[r.resident_id]) rc[r.resident_id] = [];
+      rc[r.resident_id].push(r.cohort_id);
+    });
+    setResidentCohorts(rc);
+    setLoading(false);
   }
 
   async function fetchCohorts() {
     const { data } = await supabase
-      .from('cohorts')
-      .select('id, name')
-      .eq('program_id', effectiveProgramId)
-    setCohorts(data ?? [])
+      .from("cohorts")
+      .select("id, name")
+      .eq("program_id", effectiveProgramId);
+    setCohorts(data ?? []);
   }
 
   useEffect(() => {
-    if (!effectiveProgramId) return
-    fetchResidents() // eslint-disable-line react-hooks/set-state-in-effect -- data fetch
-    fetchCohorts()
-  }, [effectiveProgramId]) // eslint-disable-line react-hooks/exhaustive-deps -- fetch helpers intentionally stable for this route
+    if (!effectiveProgramId) return;
+    fetchResidents(); // eslint-disable-line react-hooks/set-state-in-effect -- data fetch
+    fetchCohorts();
+  }, [effectiveProgramId]); // eslint-disable-line react-hooks/exhaustive-deps -- fetch helpers intentionally stable for this route
 
   const filtered = residents.filter(
     (r) =>
       !search ||
       r.email?.toLowerCase().includes(search.toLowerCase()) ||
-      r.display_name?.toLowerCase().includes(search.toLowerCase())
-  )
-  const totalPages = Math.ceil(filtered.length / pageSize) || 1
-  const paginated = filtered.slice((page - 1) * pageSize, page * pageSize)
+      r.display_name?.toLowerCase().includes(search.toLowerCase()),
+  );
+  const totalPages = Math.ceil(filtered.length / pageSize) || 1;
+  const paginated = filtered.slice((page - 1) * pageSize, page * pageSize);
 
   function getCohortNames(residentId) {
-    const cohortIds = residentCohorts[residentId] ?? []
-    return cohorts
-      .filter((c) => cohortIds.includes(c.id))
-      .map((c) => c.name)
-      .join(', ') || '—'
+    const cohortIds = residentCohorts[residentId] ?? [];
+    return (
+      cohorts
+        .filter((c) => cohortIds.includes(c.id))
+        .map((c) => c.name)
+        .join(", ") || "—"
+    );
   }
 
   return (
     <>
       <h1
         className="font-pixel text-base text-flag-yellow mb-6"
-        style={{ textShadow: '0 0 12px rgba(244,196,48,0.3)' }}
+        style={{ textShadow: "0 0 12px rgba(244,196,48,0.3)" }}
       >
         RESIDENTS
       </h1>
@@ -136,7 +140,7 @@ export function ResidentsPage() {
               <div
                 key={i}
                 className="h-4 bg-gray-200 rounded animate-pulse"
-                style={{ width: '100%' }}
+                style={{ width: "100%" }}
               />
             ))}
           </div>
@@ -153,7 +157,10 @@ export function ResidentsPage() {
               </thead>
               <tbody>
                 {paginated.map((r) => (
-                  <tr key={r.id} className="border-b border-border-dark hover:bg-[rgba(29,59,142,0.1)]">
+                  <tr
+                    key={r.id}
+                    className="border-b border-border-dark hover:bg-[rgba(29,59,142,0.1)]"
+                  >
                     <td className="px-3.5 py-2.5">
                       <Link
                         to={`${linkPrefix}/residents/${r.id}`}
@@ -190,7 +197,8 @@ export function ResidentsPage() {
             <div className="flex items-center justify-between px-4 py-3 border-t border-border-dark">
               <p className="text-sm text-text-muted">
                 Showing {(page - 1) * pageSize + 1}–
-                {Math.min(page * pageSize, filtered.length)} of {filtered.length}
+                {Math.min(page * pageSize, filtered.length)} of{" "}
+                {filtered.length}
               </p>
               <div className="flex gap-1">
                 <button
@@ -201,21 +209,21 @@ export function ResidentsPage() {
                   Prev
                 </button>
                 {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  const p = page <= 3 ? i + 1 : page - 2 + i
-                  if (p < 1 || p > totalPages) return null
+                  const p = page <= 3 ? i + 1 : page - 2 + i;
+                  if (p < 1 || p > totalPages) return null;
                   return (
                     <button
                       key={p}
                       onClick={() => setPage(p)}
                       className={`px-3 py-1 text-sm rounded-sm ${
                         page === p
-                          ? 'bg-royal-blue text-white'
-                          : 'bg-surface-inner border-2 border-border-dark text-text-muted'
+                          ? "bg-royal-blue text-white"
+                          : "bg-surface-inner border-2 border-border-dark text-text-muted"
                       }`}
                     >
                       {p}
                     </button>
-                  )
+                  );
                 })}
                 <button
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
@@ -226,8 +234,8 @@ export function ResidentsPage() {
                 </button>
               </div>
             </div>
-            </>
-          )}
+          </>
+        )}
       </Card>
 
       <AddResidentModal
@@ -236,9 +244,9 @@ export function ResidentsPage() {
         programId={effectiveProgramId}
         cohorts={cohorts}
         onSuccess={() => {
-          fetchResidents()
-          setAddModalOpen(false)
-          showToast('Resident added', 'success')
+          fetchResidents();
+          setAddModalOpen(false);
+          showToast("Resident added", "success");
         }}
         showToast={showToast}
       />
@@ -251,9 +259,9 @@ export function ResidentsPage() {
         isInspecting={isInspecting}
         programName={programName}
         onSuccess={() => {
-          fetchResidents()
-          setCsvModalOpen(false)
-          showToast('Residents uploaded', 'success')
+          fetchResidents();
+          setCsvModalOpen(false);
+          showToast("Residents uploaded", "success");
         }}
         showToast={showToast}
       />
@@ -265,9 +273,9 @@ export function ResidentsPage() {
           programName={programName}
           onClose={() => setResetModalOpen(null)}
           onSuccess={(newPassword) => {
-            setResetModalOpen(null)
-            setResetResultModal(newPassword)
-            fetchResidents()
+            setResetModalOpen(null);
+            setResetResultModal(newPassword);
+            fetchResidents();
           }}
         />
       )}
@@ -287,82 +295,96 @@ export function ResidentsPage() {
           programName={programName}
           onClose={() => setDeactivateModalOpen(null)}
           onSuccess={() => {
-            setDeactivateModalOpen(null)
-            fetchResidents()
+            setDeactivateModalOpen(null);
+            fetchResidents();
             showToast(
-              deactivateModalOpen.active ? 'Resident deactivated' : 'Resident activated',
-              'success'
-            )
+              deactivateModalOpen.active
+                ? "Resident deactivated"
+                : "Resident activated",
+              "success",
+            );
           }}
         />
       )}
     </>
-  )
+  );
 }
 
 function ResidentActions({ resident, linkPrefix, onReset, onDeactivate }) {
-  const navigate = useNavigate()
+  const navigate = useNavigate();
   return (
     <Dropdown label="•••" dismissOnClick>
-      <Dropdown.Item onClick={() => navigate(`${linkPrefix}/residents/${resident.id}`)}>
+      <Dropdown.Item
+        onClick={() => navigate(`${linkPrefix}/residents/${resident.id}`)}
+      >
         View Details
       </Dropdown.Item>
       <Dropdown.Item onClick={onReset}>Reset Password</Dropdown.Item>
       <Dropdown.Item onClick={onDeactivate}>
-        {resident.active ? 'Deactivate' : 'Activate'}
+        {resident.active ? "Deactivate" : "Activate"}
       </Dropdown.Item>
     </Dropdown>
-  )
+  );
 }
 
-function AddResidentModal({ open, onClose, programId, cohorts, onSuccess, showToast }) {
-  const [email, setEmail] = useState('')
-  const [displayName, setDisplayName] = useState('')
-  const [password, setPassword] = useState('')
-  const [cohortIds, setCohortIds] = useState([])
-  const [loading, setLoading] = useState(false)
+function AddResidentModal({
+  open,
+  onClose,
+  programId,
+  cohorts,
+  onSuccess,
+  showToast,
+}) {
+  const [email, setEmail] = useState("");
+  const [displayName, setDisplayName] = useState("");
+  const [password, setPassword] = useState("");
+  const [cohortIds, setCohortIds] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (open) {
-      setEmail('') // eslint-disable-line react-hooks/set-state-in-effect -- reset form when modal opens
-      setDisplayName('')
-      setPassword(generatePassword())
-      setCohortIds([])
+      setEmail(""); // eslint-disable-line react-hooks/set-state-in-effect -- reset form when modal opens
+      setDisplayName("");
+      setPassword(generatePassword());
+      setCohortIds([]);
     }
-  }, [open])
+  }, [open]);
 
   async function handleSubmit(e) {
-    e.preventDefault()
-    if (!programId) return
-    setLoading(true)
-    const hash = hashSync(password, 10)
-    const { error } = await supabase.from('residents').insert({
+    e.preventDefault();
+    if (!programId) return;
+    setLoading(true);
+    const hash = hashSync(password, 10);
+    const { error } = await supabase.from("residents").insert({
       program_id: programId,
       email,
       display_name: displayName || null,
       password_hash: hash,
       active: true,
-    })
-    setLoading(false)
+    });
+    setLoading(false);
     if (error) {
-      showToast(error.message, 'error')
-      return
+      showToast(error.message, "error");
+      return;
     }
     const { data: newResident } = await supabase
-      .from('residents')
-      .select('id')
-      .eq('program_id', programId)
-      .eq('email', email)
-      .single()
+      .from("residents")
+      .select("id")
+      .eq("program_id", programId)
+      .eq("email", email)
+      .single();
     if (newResident && cohortIds.length > 0) {
-      await supabase.from('resident_cohorts').insert(
-        cohortIds.map((cid) => ({ resident_id: newResident.id, cohort_id: cid }))
-      )
+      await supabase.from("resident_cohorts").insert(
+        cohortIds.map((cid) => ({
+          resident_id: newResident.id,
+          cohort_id: cid,
+        })),
+      );
     }
-    onSuccess()
+    onSuccess();
   }
 
-  if (!open) return null
+  if (!open) return null;
   return (
     <Modal show={open} onClose={onClose}>
       <Modal.Header>Add Resident</Modal.Header>
@@ -406,8 +428,8 @@ function AddResidentModal({ open, onClose, programId, cohorts, onSuccess, showTo
                 <button
                   type="button"
                   onClick={() => {
-                    navigator.clipboard.writeText(password)
-                    showToast('Copied to clipboard', 'success')
+                    navigator.clipboard.writeText(password);
+                    showToast("Copied to clipboard", "success");
                   }}
                   className="px-3 py-2 text-sm border rounded-lg hover:bg-gray-100"
                 >
@@ -430,7 +452,7 @@ function AddResidentModal({ open, onClose, programId, cohorts, onSuccess, showTo
                           setCohortIds((prev) =>
                             e.target.checked
                               ? [...prev, c.id]
-                              : prev.filter((id) => id !== c.id)
+                              : prev.filter((id) => id !== c.id),
                           )
                         }
                       />
@@ -455,94 +477,112 @@ function AddResidentModal({ open, onClose, programId, cohorts, onSuccess, showTo
             disabled={loading}
             className="px-5 py-2.5 text-sm font-medium text-white bg-primary-700 rounded-lg hover:bg-primary-800"
           >
-            {loading ? 'Adding...' : 'Add'}
+            {loading ? "Adding..." : "Add"}
           </button>
         </Modal.Footer>
       </form>
     </Modal>
-  )
+  );
 }
 
-function CsvUploadModal({ open, onClose, programId, cohorts: _cohorts, isInspecting, programName, onSuccess, showToast }) {
-  const [, setFile] = useState(null)
-  const [parsed, setParsed] = useState([])
-  const [loading, setLoading] = useState(false)
-  const [credentials, setCredentials] = useState([])
+function CsvUploadModal({
+  open,
+  onClose,
+  programId,
+  cohorts: _cohorts,
+  isInspecting,
+  programName,
+  onSuccess,
+  showToast,
+}) {
+  const [, setFile] = useState(null);
+  const [parsed, setParsed] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [credentials, setCredentials] = useState([]);
 
   function parseCsv(text) {
-    const lines = text.trim().split(/\r?\n/)
-    if (lines.length < 2) return []
-    const headers = lines[0].toLowerCase().split(',').map((h) => h.trim())
-    const emailIdx = headers.findIndex((h) => h === 'email')
-    const nameIdx = headers.findIndex((h) => h === 'display_name' || h === 'displayname')
-    const cohortIdx = headers.findIndex((h) => h === 'cohort' || h === 'cohorts')
-    if (emailIdx < 0) return []
-    const rows = []
+    const lines = text.trim().split(/\r?\n/);
+    if (lines.length < 2) return [];
+    const headers = lines[0]
+      .toLowerCase()
+      .split(",")
+      .map((h) => h.trim());
+    const emailIdx = headers.findIndex((h) => h === "email");
+    const nameIdx = headers.findIndex(
+      (h) => h === "display_name" || h === "displayname",
+    );
+    const cohortIdx = headers.findIndex(
+      (h) => h === "cohort" || h === "cohorts",
+    );
+    if (emailIdx < 0) return [];
+    const rows = [];
     for (let i = 1; i < lines.length; i++) {
-      const vals = lines[i].split(',').map((v) => v.trim())
-      const email = vals[emailIdx] || ''
-      if (!email) continue
+      const vals = lines[i].split(",").map((v) => v.trim());
+      const email = vals[emailIdx] || "";
+      if (!email) continue;
       rows.push({
         email,
-        display_name: nameIdx >= 0 ? vals[nameIdx] || '' : '',
-        cohort: cohortIdx >= 0 ? vals[cohortIdx] || '' : '',
-      })
+        display_name: nameIdx >= 0 ? vals[nameIdx] || "" : "",
+        cohort: cohortIdx >= 0 ? vals[cohortIdx] || "" : "",
+      });
     }
-    return rows
+    return rows;
   }
 
   function handleFile(e) {
-    const f = e.target.files?.[0]
-    if (!f?.name.endsWith('.csv')) {
-      showToast('Please select a CSV file', 'error')
-      return
+    const f = e.target.files?.[0];
+    if (!f?.name.endsWith(".csv")) {
+      showToast("Please select a CSV file", "error");
+      return;
     }
-    const reader = new FileReader()
+    const reader = new FileReader();
     reader.onload = () => {
-      const rows = parseCsv(reader.result)
-      setParsed(rows)
-      setFile(f)
-    }
-    reader.readAsText(f)
+      const rows = parseCsv(reader.result);
+      setParsed(rows);
+      setFile(f);
+    };
+    reader.readAsText(f);
   }
 
   async function handleUpload() {
-    if (!programId || parsed.length === 0) return
-    setLoading(true)
-    const creds = []
+    if (!programId || parsed.length === 0) return;
+    setLoading(true);
+    const creds = [];
     for (const row of parsed) {
-      const password = generatePassword()
-      const hash = hashSync(password, 10)
-      const { error } = await supabase.from('residents').insert({
+      const password = generatePassword();
+      const hash = hashSync(password, 10);
+      const { error } = await supabase.from("residents").insert({
         program_id: programId,
         email: row.email,
         display_name: row.display_name || null,
         password_hash: hash,
         active: true,
-      })
+      });
       if (error) {
-        showToast(`Failed to add ${row.email}: ${error.message}`, 'error')
-        continue
+        showToast(`Failed to add ${row.email}: ${error.message}`, "error");
+        continue;
       }
-      creds.push({ email: row.email, password })
+      creds.push({ email: row.email, password });
     }
-    setCredentials(creds)
-    setLoading(false)
-    if (creds.length > 0) onSuccess()
+    setCredentials(creds);
+    setLoading(false);
+    if (creds.length > 0) onSuccess();
   }
 
   function downloadCreds() {
-    const csv = 'email,password\n' + credentials.map((c) => `${c.email},${c.password}`).join('\n')
-    const blob = new Blob([csv], { type: 'text/csv' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'resident-credentials.csv'
-    a.click()
-    URL.revokeObjectURL(url)
+    const csv =
+      "email,password\n" +
+      credentials.map((c) => `${c.email},${c.password}`).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "resident-credentials.csv";
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
-  if (!open) return null
+  if (!open) return null;
   return (
     <Modal show={open} onClose={onClose} size="lg">
       <Modal.Header>Bulk Upload Residents</Modal.Header>
@@ -556,9 +596,9 @@ function CsvUploadModal({ open, onClose, programId, cohorts: _cohorts, isInspect
           className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center"
           onDragOver={(e) => e.preventDefault()}
           onDrop={(e) => {
-            e.preventDefault()
-            const f = e.dataTransfer.files?.[0]
-            if (f) handleFile({ target: { files: [f] } })
+            e.preventDefault();
+            const f = e.dataTransfer.files?.[0];
+            if (f) handleFile({ target: { files: [f] } });
           }}
         >
           <input
@@ -573,8 +613,9 @@ function CsvUploadModal({ open, onClose, programId, cohorts: _cohorts, isInspect
           </label>
         </div>
         <p className="text-sm text-gray-500 mt-2">
-          CSV columns: <code>email</code>, <code>display_name</code> (optional),{' '}
-          <code>cohort</code> (optional). One resident per row. First row must be headers.
+          CSV columns: <code>email</code>, <code>display_name</code> (optional),{" "}
+          <code>cohort</code> (optional). One resident per row. First row must
+          be headers.
         </p>
         {parsed.length > 0 && (
           <div className="mt-4">
@@ -593,21 +634,24 @@ function CsvUploadModal({ open, onClose, programId, cohorts: _cohorts, isInspect
                   {parsed.slice(0, 5).map((r, i) => (
                     <tr key={i} className="border-t">
                       <td className="px-3 py-2">{r.email}</td>
-                      <td className="px-3 py-2">{r.display_name || '—'}</td>
+                      <td className="px-3 py-2">{r.display_name || "—"}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
             {parsed.length > 5 && (
-              <p className="text-sm text-gray-500 mt-1">and {parsed.length - 5} more...</p>
+              <p className="text-sm text-gray-500 mt-1">
+                and {parsed.length - 5} more...
+              </p>
             )}
           </div>
         )}
         {credentials.length > 0 && (
           <div className="mt-4 p-4 bg-green-50 rounded-lg">
             <p className="text-sm font-medium text-green-800 mb-2">
-              {credentials.length} residents added. Download credentials to distribute:
+              {credentials.length} residents added. Download credentials to
+              distribute:
             </p>
             <button
               onClick={downloadCreds}
@@ -623,7 +667,7 @@ function CsvUploadModal({ open, onClose, programId, cohorts: _cohorts, isInspect
           onClick={onClose}
           className="px-5 py-2.5 text-sm font-medium text-gray-900 bg-white border border-gray-300 rounded-lg hover:bg-gray-100"
         >
-          {credentials.length > 0 ? 'Close' : 'Cancel'}
+          {credentials.length > 0 ? "Close" : "Cancel"}
         </button>
         {credentials.length === 0 && (
           <button
@@ -631,28 +675,34 @@ function CsvUploadModal({ open, onClose, programId, cohorts: _cohorts, isInspect
             disabled={loading || parsed.length === 0}
             className="px-5 py-2.5 text-sm font-medium text-white bg-primary-700 rounded-lg hover:bg-primary-800 disabled:opacity-50"
           >
-            {loading ? 'Uploading...' : 'Upload'}
+            {loading ? "Uploading..." : "Upload"}
           </button>
         )}
       </Modal.Footer>
     </Modal>
-  )
+  );
 }
 
-function ResetPasswordModal({ resident, isInspecting, programName, onClose, onSuccess }) {
-  const [loading, setLoading] = useState(false)
+function ResetPasswordModal({
+  resident,
+  isInspecting,
+  programName,
+  onClose,
+  onSuccess,
+}) {
+  const [loading, setLoading] = useState(false);
 
   async function handleConfirm() {
-    setLoading(true)
-    const newPassword = generatePassword()
-    const hash = hashSync(newPassword, 10)
+    setLoading(true);
+    const newPassword = generatePassword();
+    const hash = hashSync(newPassword, 10);
     const { error } = await supabase
-      .from('residents')
+      .from("residents")
       .update({ password_hash: hash })
-      .eq('id', resident.id)
-    setLoading(false)
-    if (error) return
-    onSuccess(newPassword)
+      .eq("id", resident.id);
+    setLoading(false);
+    if (error) return;
+    onSuccess(newPassword);
   }
 
   return (
@@ -665,7 +715,8 @@ function ResetPasswordModal({ resident, isInspecting, programName, onClose, onSu
           </div>
         )}
         <p className="text-sm text-gray-600">
-          Reset password for {resident.email}? They will need the new password to log in.
+          Reset password for {resident.email}? They will need the new password
+          to log in.
         </p>
       </Modal.Body>
       <Modal.Footer>
@@ -680,11 +731,11 @@ function ResetPasswordModal({ resident, isInspecting, programName, onClose, onSu
           disabled={loading}
           className="px-5 py-2.5 text-sm font-medium text-white bg-primary-700 rounded-lg hover:bg-primary-800"
         >
-          {loading ? 'Resetting...' : 'Reset'}
+          {loading ? "Resetting..." : "Reset"}
         </button>
       </Modal.Footer>
     </Modal>
-  )
+  );
 }
 
 function ResetResultModal({ password, onClose, showToast }) {
@@ -704,8 +755,8 @@ function ResetResultModal({ password, onClose, showToast }) {
           />
           <button
             onClick={() => {
-              navigator.clipboard.writeText(password)
-              showToast('Copied to clipboard', 'success')
+              navigator.clipboard.writeText(password);
+              showToast("Copied to clipboard", "success");
             }}
             className="px-3 py-2 text-sm border rounded-lg hover:bg-gray-100"
           >
@@ -722,26 +773,32 @@ function ResetResultModal({ password, onClose, showToast }) {
         </button>
       </Modal.Footer>
     </Modal>
-  )
+  );
 }
 
-function DeactivateModal({ resident, isInspecting, programName, onClose, onSuccess }) {
-  const [loading, setLoading] = useState(false)
+function DeactivateModal({
+  resident,
+  isInspecting,
+  programName,
+  onClose,
+  onSuccess,
+}) {
+  const [loading, setLoading] = useState(false);
 
   async function handleConfirm() {
-    setLoading(true)
+    setLoading(true);
     const { error } = await supabase
-      .from('residents')
+      .from("residents")
       .update({ active: !resident.active })
-      .eq('id', resident.id)
-    setLoading(false)
-    if (error) return
-    onSuccess()
+      .eq("id", resident.id);
+    setLoading(false);
+    if (error) return;
+    onSuccess();
   }
 
   return (
     <Modal show onClose={onClose}>
-      <Modal.Header>{resident.active ? 'Deactivate' : 'Activate'}</Modal.Header>
+      <Modal.Header>{resident.active ? "Deactivate" : "Activate"}</Modal.Header>
       <Modal.Body>
         {isInspecting && programName && (
           <div className="mb-3 p-3 bg-[rgba(244,196,48,0.08)] border border-flag-yellow rounded-sm text-sm text-flag-yellow">
@@ -765,12 +822,14 @@ function DeactivateModal({ resident, isInspecting, programName, onClose, onSucce
           onClick={handleConfirm}
           disabled={loading}
           className={`px-5 py-2.5 text-sm font-medium text-white rounded-lg ${
-            resident.active ? 'bg-red-600 hover:bg-red-700' : 'bg-primary-700 hover:bg-primary-800'
+            resident.active
+              ? "bg-red-600 hover:bg-red-700"
+              : "bg-primary-700 hover:bg-primary-800"
           }`}
         >
-          {loading ? 'Saving...' : resident.active ? 'Deactivate' : 'Activate'}
+          {loading ? "Saving..." : resident.active ? "Deactivate" : "Activate"}
         </button>
       </Modal.Footer>
     </Modal>
-  )
+  );
 }

@@ -1,54 +1,59 @@
-import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { supabase } from '../lib/supabase'
-import { useToast } from '../contexts/ToastContext'
-import { Modal, Dropdown } from 'flowbite-react'
-import { Card } from '../components/Card'
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "../lib/supabase";
+import { useToast } from "../contexts/ToastContext";
+import { Modal, Dropdown } from "flowbite-react";
+import { Card } from "../components/Card";
 
 export function ProgramsPage() {
-  const { showToast } = useToast()
-  const navigate = useNavigate()
-  const [programs, setPrograms] = useState([])
-  const [leaderCounts, setLeaderCounts] = useState({})
-  const [residentCounts, setResidentCounts] = useState({})
-  const [loading, setLoading] = useState(true)
-  const [createModalOpen, setCreateModalOpen] = useState(false)
+  const { showToast } = useToast();
+  const navigate = useNavigate();
+  const [programs, setPrograms] = useState([]);
+  const [leaderCounts, setLeaderCounts] = useState({});
+  const [residentCounts, setResidentCounts] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [createModalOpen, setCreateModalOpen] = useState(false);
 
   async function fetchData() {
-    setLoading(true)
-    const { data: progData } = await supabase.from('programs').select('*').order('name')
-    setPrograms(progData ?? [])
+    setLoading(true);
+    const { data: progData } = await supabase
+      .from("programs")
+      .select("*")
+      .order("name");
+    setPrograms(progData ?? []);
 
     const { data: profiles } = await supabase
-      .from('profiles')
-      .select('program_id')
-      .eq('role', 'leader')
-    const lc = {}
+      .from("profiles")
+      .select("program_id")
+      .eq("role", "leader");
+    const lc = {};
     profiles?.forEach((p) => {
       if (p.program_id) {
-        lc[p.program_id] = (lc[p.program_id] ?? 0) + 1
+        lc[p.program_id] = (lc[p.program_id] ?? 0) + 1;
       }
-    })
-    setLeaderCounts(lc)
+    });
+    setLeaderCounts(lc);
 
-    const { data: residents } = await supabase.from('residents').select('program_id')
-    const rc = {}
+    const { data: residents } = await supabase
+      .from("residents")
+      .select("program_id");
+    const rc = {};
     residents?.forEach((r) => {
-      rc[r.program_id] = (rc[r.program_id] ?? 0) + 1
-    })
-    setResidentCounts(rc)
-    setLoading(false)
+      rc[r.program_id] = (rc[r.program_id] ?? 0) + 1;
+    });
+    setResidentCounts(rc);
+    setLoading(false);
   }
 
   useEffect(() => {
-    fetchData() // eslint-disable-line react-hooks/set-state-in-effect -- data fetch
-  }, [])
+    fetchData(); // eslint-disable-line react-hooks/set-state-in-effect -- data fetch
+  }, []);
 
   return (
     <>
       <h1
         className="font-pixel text-base text-flag-yellow mb-6"
-        style={{ textShadow: '0 0 12px rgba(244,196,48,0.3)' }}
+        style={{ textShadow: "0 0 12px rgba(244,196,48,0.3)" }}
       >
         PROGRAMS
       </h1>
@@ -66,7 +71,10 @@ export function ProgramsPage() {
         {loading ? (
           <div className="p-8 space-y-3">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="h-4 bg-surface-inner rounded animate-pulse" />
+              <div
+                key={i}
+                className="h-4 bg-surface-inner rounded animate-pulse"
+              />
             ))}
           </div>
         ) : (
@@ -81,13 +89,22 @@ export function ProgramsPage() {
             </thead>
             <tbody>
               {programs.map((p) => (
-                <tr key={p.id} className="border-b border-border-dark hover:bg-[rgba(29,59,142,0.1)]">
-                  <td className="px-3.5 py-2.5 font-bold text-text-bright">{p.name}</td>
+                <tr
+                  key={p.id}
+                  className="border-b border-border-dark hover:bg-[rgba(29,59,142,0.1)]"
+                >
+                  <td className="px-3.5 py-2.5 font-bold text-text-bright">
+                    {p.name}
+                  </td>
                   <td className="px-3.5 py-2.5">{leaderCounts[p.id] ?? 0}</td>
                   <td className="px-3.5 py-2.5">{residentCounts[p.id] ?? 0}</td>
                   <td className="px-3.5 py-2.5">
                     <Dropdown label="•••" dismissOnClick>
-                      <Dropdown.Item onClick={() => navigate(`/admin/programs/${p.id}/dashboard`)}>
+                      <Dropdown.Item
+                        onClick={() =>
+                          navigate(`/admin/programs/${p.id}/dashboard`)
+                        }
+                      >
                         Inspect
                       </Dropdown.Item>
                     </Dropdown>
@@ -103,33 +120,35 @@ export function ProgramsPage() {
         open={createModalOpen}
         onClose={() => setCreateModalOpen(false)}
         onSuccess={() => {
-          fetchData()
-          setCreateModalOpen(false)
-          showToast('Program created', 'success')
+          fetchData();
+          setCreateModalOpen(false);
+          showToast("Program created", "success");
         }}
         showToast={showToast}
       />
     </>
-  )
+  );
 }
 
 function CreateProgramModal({ open, onClose, onSuccess, showToast }) {
-  const [name, setName] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [name, setName] = useState("");
+  const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e) {
-    e.preventDefault()
-    setLoading(true)
-    const { error } = await supabase.from('programs').insert({ name: name.trim() })
-    setLoading(false)
+    e.preventDefault();
+    setLoading(true);
+    const { error } = await supabase
+      .from("programs")
+      .insert({ name: name.trim() });
+    setLoading(false);
     if (error) {
-      showToast(error.message, 'error')
-      return
+      showToast(error.message, "error");
+      return;
     }
-    onSuccess()
+    onSuccess();
   }
 
-  if (!open) return null
+  if (!open) return null;
   return (
     <Modal show={open} onClose={onClose}>
       <Modal.Header>Create Program</Modal.Header>
@@ -162,10 +181,10 @@ function CreateProgramModal({ open, onClose, onSuccess, showToast }) {
             disabled={loading}
             className="px-5 py-2.5 text-sm font-medium text-white bg-primary-700 rounded-lg hover:bg-primary-800"
           >
-            {loading ? 'Creating...' : 'Create'}
+            {loading ? "Creating..." : "Create"}
           </button>
         </Modal.Footer>
       </form>
     </Modal>
-  )
+  );
 }

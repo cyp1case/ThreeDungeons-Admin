@@ -1,100 +1,103 @@
-import { useEffect, useState } from 'react'
-import { supabase } from '../lib/supabase'
-import { useAuth } from '../contexts/AuthContext'
-import { useSelectedProgram } from '../contexts/SelectedProgramContext'
-import { DUNGEONS } from '../lib/dungeonConfig'
-import { buildResidentQuestionStatus } from '../lib/dungeonProgress'
-import { Card } from '../components/Card'
-import { CompletionBadge } from '../components/CompletionBadge'
-import { ProgressBar } from '../components/ProgressBar'
+import { useEffect, useState } from "react";
+import { supabase } from "../lib/supabase";
+import { useAuth } from "../contexts/AuthContext";
+import { useSelectedProgram } from "../contexts/SelectedProgramContext";
+import { DUNGEONS } from "../lib/dungeonConfig";
+import { buildResidentQuestionStatus } from "../lib/dungeonProgress";
+import { Card } from "../components/Card";
+import { CompletionBadge } from "../components/CompletionBadge";
+import { ProgressBar } from "../components/ProgressBar";
 
 function formatModuleId(id) {
   return id
-    .replace(/^CE_Q\d+_/, '')
-    .replace(/_/g, ' ')
-    .replace(/\b\w/g, (c) => c.toUpperCase())
+    .replace(/^CE_Q\d+_/, "")
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 export function DungeonsPage() {
-  const { profileLoading } = useAuth()
-  const { effectiveProgramId } = useSelectedProgram()
-  const [residents, setResidents] = useState([])
-  const [attempts, setAttempts] = useState([])
-  const [loading, setLoading] = useState(true)
+  const { profileLoading } = useAuth();
+  const { effectiveProgramId } = useSelectedProgram();
+  const [residents, setResidents] = useState([]);
+  const [attempts, setAttempts] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   async function fetchData() {
-    setLoading(true)
+    setLoading(true);
     const { data: residentsData } = await supabase
-      .from('residents')
-      .select('id')
-      .eq('program_id', effectiveProgramId)
-    setResidents(residentsData ?? [])
+      .from("residents")
+      .select("id")
+      .eq("program_id", effectiveProgramId);
+    setResidents(residentsData ?? []);
 
     const { data: attemptsData } = await supabase
-      .from('attempts')
-      .select('resident_id, module_id, outcome')
-      .eq('program_id', effectiveProgramId)
-    setAttempts(attemptsData ?? [])
-    setLoading(false)
+      .from("attempts")
+      .select("resident_id, module_id, outcome")
+      .eq("program_id", effectiveProgramId);
+    setAttempts(attemptsData ?? []);
+    setLoading(false);
   }
 
   useEffect(() => {
-    if (profileLoading) return
-    if (!effectiveProgramId) return
-    fetchData() // eslint-disable-line react-hooks/set-state-in-effect -- data fetch
-  }, [effectiveProgramId, profileLoading]) // eslint-disable-line react-hooks/exhaustive-deps -- fetch helper intentionally stable for this route
+    if (profileLoading) return;
+    if (!effectiveProgramId) return;
+    fetchData(); // eslint-disable-line react-hooks/set-state-in-effect -- data fetch
+  }, [effectiveProgramId, profileLoading]); // eslint-disable-line react-hooks/exhaustive-deps -- fetch helper intentionally stable for this route
 
-  const residentIds = new Set(residents.map((r) => r.id))
-  const questionStatus = buildResidentQuestionStatus(attempts)
+  const residentIds = new Set(residents.map((r) => r.id));
+  const questionStatus = buildResidentQuestionStatus(attempts);
 
   const dungeonCards = DUNGEONS.map((d) => {
-    const totalSlots = d.questionIds.length * residentIds.size
-    let completedCount = 0
-    let wrongCount = 0
+    const totalSlots = d.questionIds.length * residentIds.size;
+    let completedCount = 0;
+    let wrongCount = 0;
     for (const rid of residentIds) {
-      const byResident = questionStatus[rid] || {}
+      const byResident = questionStatus[rid] || {};
       for (const qid of d.questionIds) {
-        const s = byResident[qid]
-        if (s?.hasCorrect) completedCount++
-        if (s?.hasWrong) wrongCount++
+        const s = byResident[qid];
+        if (s?.hasCorrect) completedCount++;
+        if (s?.hasWrong) wrongCount++;
       }
     }
-    const avgCompletion = totalSlots > 0 ? Math.round((completedCount / totalSlots) * 100) : 0
-    const avgWrong = totalSlots > 0 ? Math.round((wrongCount / totalSlots) * 100) : 0
+    const avgCompletion =
+      totalSlots > 0 ? Math.round((completedCount / totalSlots) * 100) : 0;
+    const avgWrong =
+      totalSlots > 0 ? Math.round((wrongCount / totalSlots) * 100) : 0;
     return {
       ...d,
       avgCompletion,
       avgWrong,
-    }
-  })
+    };
+  });
 
-  const questionRows = []
-  const attemptCountByQuestion = {}
+  const questionRows = [];
+  const attemptCountByQuestion = {};
   for (const a of attempts) {
-    if (!attemptCountByQuestion[a.module_id]) attemptCountByQuestion[a.module_id] = 0
-    attemptCountByQuestion[a.module_id]++
+    if (!attemptCountByQuestion[a.module_id])
+      attemptCountByQuestion[a.module_id] = 0;
+    attemptCountByQuestion[a.module_id]++;
   }
 
   for (const d of DUNGEONS) {
     for (const qid of d.questionIds) {
-      let correctResidents = 0
-      let wrongResidents = 0
+      let correctResidents = 0;
+      let wrongResidents = 0;
       for (const rid of residentIds) {
-        const byResident = questionStatus[rid] || {}
-        const s = byResident[qid]
-        if (s?.hasCorrect) correctResidents++
-        if (s?.hasWrong) wrongResidents++
+        const byResident = questionStatus[rid] || {};
+        const s = byResident[qid];
+        if (s?.hasCorrect) correctResidents++;
+        if (s?.hasWrong) wrongResidents++;
       }
-      const totalResidents = residentIds.size || 1
-      const pctCorrect = Math.round((correctResidents / totalResidents) * 100)
-      const pctWrong = Math.round((wrongResidents / totalResidents) * 100)
+      const totalResidents = residentIds.size || 1;
+      const pctCorrect = Math.round((correctResidents / totalResidents) * 100);
+      const pctWrong = Math.round((wrongResidents / totalResidents) * 100);
       questionRows.push({
         questionId: qid,
         dungeon: d.name,
         pctCorrect,
         pctWrong,
         attempts: attemptCountByQuestion[qid] ?? 0,
-      })
+      });
     }
   }
 
@@ -105,7 +108,7 @@ export function DungeonsPage() {
           Select a program to view dungeon analytics.
         </p>
       </Card>
-    )
+    );
   }
 
   if (loading) {
@@ -113,14 +116,14 @@ export function DungeonsPage() {
       <div className="flex justify-center py-12">
         <div className="w-8 h-8 border-4 border-border-dark border-t-royal-blue rounded-full animate-spin" />
       </div>
-    )
+    );
   }
 
   return (
     <>
       <h1
         className="font-pixel text-base text-flag-yellow mb-7"
-        style={{ textShadow: '0 0 12px rgba(244,196,48,0.3)' }}
+        style={{ textShadow: "0 0 12px rgba(244,196,48,0.3)" }}
       >
         DUNGEONS
       </h1>
@@ -132,9 +135,15 @@ export function DungeonsPage() {
               {d.name.toUpperCase()}
             </p>
             <p className="text-xs text-text-muted mb-4">{d.topic}</p>
-            <p className="font-pixel text-2xl text-flag-yellow">{d.avgCompletion}%</p>
-            <p className="text-xs text-text-muted mt-1">{d.questionIds.length} questions</p>
-            <p className="text-[11px] text-roof-red mt-1">{d.avgWrong}% wrong</p>
+            <p className="font-pixel text-2xl text-flag-yellow">
+              {d.avgCompletion}%
+            </p>
+            <p className="text-xs text-text-muted mt-1">
+              {d.questionIds.length} questions
+            </p>
+            <p className="text-[11px] text-roof-red mt-1">
+              {d.avgWrong}% wrong
+            </p>
             <ProgressBar pct={d.avgCompletion} className="mt-3" />
           </Card>
         ))}
@@ -143,7 +152,7 @@ export function DungeonsPage() {
       <Card>
         <h2
           className="font-pixel text-[10px] text-text-bright mb-4"
-          style={{ textShadow: '0 0 6px rgba(255,255,255,0.2)' }}
+          style={{ textShadow: "0 0 6px rgba(255,255,255,0.2)" }}
         >
           QUESTION DIFFICULTY
         </h2>
@@ -171,7 +180,9 @@ export function DungeonsPage() {
                   <td className="px-3.5 py-2.5">
                     <CompletionBadge pct={row.pctCorrect} />
                   </td>
-                  <td className="px-3.5 py-2.5 text-roof-red text-sm">{row.pctWrong}%</td>
+                  <td className="px-3.5 py-2.5 text-roof-red text-sm">
+                    {row.pctWrong}%
+                  </td>
                   <td className="px-3.5 py-2.5">{row.attempts}</td>
                 </tr>
               ))}
@@ -180,5 +191,5 @@ export function DungeonsPage() {
         </div>
       </Card>
     </>
-  )
+  );
 }

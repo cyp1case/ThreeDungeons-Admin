@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
-import { hashSync } from 'bcrypt-ts/browser'
+import { useEffect, useState } from "react";
+import { useParams, Link } from "react-router-dom";
+import { hashSync } from "bcrypt-ts/browser";
 import {
   RadarChart,
   PolarGrid,
@@ -14,174 +14,188 @@ import {
   XAxis,
   YAxis,
   Bar,
-} from 'recharts'
-import { supabase } from '../lib/supabase'
-import { useSelectedProgram } from '../contexts/SelectedProgramContext'
-import { useToast } from '../contexts/ToastContext'
-import { Modal } from 'flowbite-react'
-import { DUNGEONS } from '../lib/dungeonConfig'
+} from "recharts";
+import { supabase } from "../lib/supabase";
+import { useSelectedProgram } from "../contexts/SelectedProgramContext";
+import { useToast } from "../contexts/ToastContext";
+import { Modal } from "flowbite-react";
+import { DUNGEONS } from "../lib/dungeonConfig";
 import {
   getResidentDungeonProgress,
   getResidentQuestionBreakdown,
-} from '../lib/dungeonProgress'
-import { Card } from '../components/Card'
-import { CardTitle } from '../components/CardTitle'
-import { StatusBadge } from '../components/StatusBadge'
-import { ProgressBar } from '../components/ProgressBar'
-import { CHART_COLORS } from '../lib/chartTheme'
+} from "../lib/dungeonProgress";
+import { Card } from "../components/Card";
+import { CardTitle } from "../components/CardTitle";
+import { StatusBadge } from "../components/StatusBadge";
+import { ProgressBar } from "../components/ProgressBar";
+import { CHART_COLORS } from "../lib/chartTheme";
 
 function generatePassword() {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789'
-  let s = ''
-  for (let i = 0; i < 8; i++) s += chars[Math.floor(Math.random() * chars.length)]
-  return s
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
+  let s = "";
+  for (let i = 0; i < 8; i++)
+    s += chars[Math.floor(Math.random() * chars.length)];
+  return s;
 }
 
 function formatModuleId(id) {
   return id
-    .replace(/^CE_Q\d+_/, '')
-    .replace(/_/g, ' ')
-    .replace(/\b\w/g, (c) => c.toUpperCase())
+    .replace(/^CE_Q\d+_/, "")
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 function formatDate(d) {
-  return new Date(d).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  })
+  return new Date(d).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
 }
 
 export function ResidentDetailPage() {
-  const { id } = useParams()
-  const { effectiveProgramId, linkPrefix, programName, isInspecting } = useSelectedProgram()
-  const { showToast } = useToast()
-  const [resident, setResident] = useState(null)
-  const [cohorts, setCohorts] = useState([])
-  const [attempts, setAttempts] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [moduleFilter, setModuleFilter] = useState('')
-  const [dateFilter, setDateFilter] = useState('all')
-  const [selectedDungeonForChart, setSelectedDungeonForChart] = useState(DUNGEONS[0]?.id ?? '')
-  const [resetModalOpen, setResetModalOpen] = useState(false)
-  const [deactivateModalOpen, setDeactivateModalOpen] = useState(false)
-  const [resetResultModal, setResetResultModal] = useState(null)
+  const { id } = useParams();
+  const { effectiveProgramId, linkPrefix, programName, isInspecting } =
+    useSelectedProgram();
+  const { showToast } = useToast();
+  const [resident, setResident] = useState(null);
+  const [cohorts, setCohorts] = useState([]);
+  const [attempts, setAttempts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [moduleFilter, setModuleFilter] = useState("");
+  const [dateFilter, setDateFilter] = useState("all");
+  const [selectedDungeonForChart, setSelectedDungeonForChart] = useState(
+    DUNGEONS[0]?.id ?? "",
+  );
+  const [resetModalOpen, setResetModalOpen] = useState(false);
+  const [deactivateModalOpen, setDeactivateModalOpen] = useState(false);
+  const [resetResultModal, setResetResultModal] = useState(null);
 
   async function fetchData() {
-    setLoading(true)
+    setLoading(true);
     const { data: resData, error: residentError } = await supabase
-      .from('residents')
-      .select('*')
-      .eq('id', id)
-      .eq('program_id', effectiveProgramId)
-      .single()
-    setResident(resData)
+      .from("residents")
+      .select("*")
+      .eq("id", id)
+      .eq("program_id", effectiveProgramId)
+      .single();
+    setResident(resData);
     if (residentError || !resData) {
-      setCohorts([])
-      setAttempts([])
-      setLoading(false)
-      return
+      setCohorts([]);
+      setAttempts([]);
+      setLoading(false);
+      return;
     }
 
     const { data: cohortData } = await supabase
-      .from('resident_cohorts')
-      .select('cohort_id')
-      .eq('resident_id', id)
-    const cohortIds = cohortData?.map((c) => c.cohort_id) ?? []
+      .from("resident_cohorts")
+      .select("cohort_id")
+      .eq("resident_id", id);
+    const cohortIds = cohortData?.map((c) => c.cohort_id) ?? [];
     const { data: cohortNames } = await supabase
-      .from('cohorts')
-      .select('name')
-      .in('id', cohortIds)
-    setCohorts(cohortNames?.map((c) => c.name) ?? [])
+      .from("cohorts")
+      .select("name")
+      .in("id", cohortIds);
+    setCohorts(cohortNames?.map((c) => c.name) ?? []);
 
     const { data: attemptData } = await supabase
-      .from('attempts')
-      .select('*')
-      .eq('resident_id', id)
-      .order('created_at', { ascending: false })
-    setAttempts(attemptData ?? [])
-    setLoading(false)
+      .from("attempts")
+      .select("*")
+      .eq("resident_id", id)
+      .order("created_at", { ascending: false });
+    setAttempts(attemptData ?? []);
+    setLoading(false);
   }
 
   useEffect(() => {
-    if (!id || !effectiveProgramId) return
-    fetchData() // eslint-disable-line react-hooks/set-state-in-effect -- data fetch
-  }, [id, effectiveProgramId]) // eslint-disable-line react-hooks/exhaustive-deps -- fetch helper intentionally stable for this route
+    if (!id || !effectiveProgramId) return;
+    fetchData(); // eslint-disable-line react-hooks/set-state-in-effect -- data fetch
+  }, [id, effectiveProgramId]); // eslint-disable-line react-hooks/exhaustive-deps -- fetch helper intentionally stable for this route
 
   const filteredAttempts = attempts.filter((a) => {
-    if (moduleFilter && a.module_id !== moduleFilter) return false
-    if (dateFilter !== 'all') {
-      const d = new Date(a.created_at)
-      const now = new Date()
-      if (dateFilter === '7') {
-        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-        if (d < weekAgo) return false
-      } else if (dateFilter === '30') {
-        const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
-        if (d < monthAgo) return false
+    if (moduleFilter && a.module_id !== moduleFilter) return false;
+    if (dateFilter !== "all") {
+      const d = new Date(a.created_at);
+      const now = new Date();
+      if (dateFilter === "7") {
+        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        if (d < weekAgo) return false;
+      } else if (dateFilter === "30") {
+        const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        if (d < monthAgo) return false;
       }
     }
-    return true
-  })
+    return true;
+  });
 
-  const moduleIds = [...new Set(attempts.map((a) => a.module_id))]
-  const dungeonProgress = getResidentDungeonProgress(attempts, DUNGEONS, id)
+  const moduleIds = [...new Set(attempts.map((a) => a.module_id))];
+  const dungeonProgress = getResidentDungeonProgress(attempts, DUNGEONS, id);
 
   const radarData =
     dungeonProgress.length > 0
       ? dungeonProgress.map((d) => ({
-          topic: `${d.topic} (${d.dungeonName.replace(/^The /, '').split(' ')[0]})`,
+          topic: `${d.topic} (${d.dungeonName.replace(/^The /, "").split(" ")[0]})`,
           completion: d.completionPct,
           wrong: d.wrongPct,
         }))
-      : []
+      : [];
 
-  const selectedDungeon = DUNGEONS.find((d) => d.id === selectedDungeonForChart) ?? DUNGEONS[0]
+  const selectedDungeon =
+    DUNGEONS.find((d) => d.id === selectedDungeonForChart) ?? DUNGEONS[0];
   const questionBreakdown = selectedDungeon
     ? getResidentQuestionBreakdown(attempts, selectedDungeon, id)
-    : []
+    : [];
 
   const overallCompletion =
     dungeonProgress.length > 0
       ? Math.round(
-          dungeonProgress.reduce((a, p) => a + p.completionPct, 0) / dungeonProgress.length
+          dungeonProgress.reduce((a, p) => a + p.completionPct, 0) /
+            dungeonProgress.length,
         )
-      : 0
+      : 0;
 
   if (loading && !resident) {
     return (
       <div className="flex justify-center py-12">
         <div className="w-8 h-8 border-4 border-border-dark border-t-royal-blue rounded-full animate-spin" />
       </div>
-    )
+    );
   }
 
   if (!resident) {
     return (
       <div className="bg-surface-card border-2 border-border-dark rounded-sm p-6">
         <p className="text-text-muted">Resident not found.</p>
-        <Link to={`${linkPrefix}/residents`} className="text-royal-blue-light hover:underline mt-2 inline-block">
+        <Link
+          to={`${linkPrefix}/residents`}
+          className="text-royal-blue-light hover:underline mt-2 inline-block"
+        >
           Back to Residents
         </Link>
       </div>
-    )
+    );
   }
 
   return (
     <>
       <nav className="text-xs text-text-muted mb-4">
-        <Link to={`${linkPrefix}/residents`} className="text-royal-blue-light hover:text-text-bright">
+        <Link
+          to={`${linkPrefix}/residents`}
+          className="text-royal-blue-light hover:text-text-bright"
+        >
           Residents
         </Link>
         <span className="mx-2">/</span>
-        <span className="text-text-primary">{resident.display_name || resident.email}</span>
+        <span className="text-text-primary">
+          {resident.display_name || resident.email}
+        </span>
       </nav>
 
       <h1
         className="font-pixel text-sm text-flag-yellow mb-6"
-        style={{ textShadow: '0 0 12px rgba(244,196,48,0.3)' }}
+        style={{ textShadow: "0 0 12px rgba(244,196,48,0.3)" }}
       >
         {resident.display_name || resident.email}
       </h1>
@@ -193,7 +207,9 @@ export function ResidentDetailPage() {
             <span className="text-[10px] text-text-muted font-bold uppercase tracking-wider">
               Email:
             </span>
-            <span className="text-sm text-text-primary font-semibold ml-2">{resident.email}</span>
+            <span className="text-sm text-text-primary font-semibold ml-2">
+              {resident.email}
+            </span>
           </div>
           <div>
             <span className="text-[10px] text-text-muted font-bold uppercase tracking-wider">
@@ -214,7 +230,7 @@ export function ResidentDetailPage() {
               Cohorts:
             </span>
             <span className="text-sm text-text-primary font-semibold ml-2">
-              {cohorts.join(', ') || '—'}
+              {cohorts.join(", ") || "—"}
             </span>
           </div>
           <div>
@@ -232,7 +248,7 @@ export function ResidentDetailPage() {
           </span>
           <span
             className="text-fantasy-green font-bold ml-2"
-            style={{ textShadow: '0 0 8px rgba(92,161,54,0.3)' }}
+            style={{ textShadow: "0 0 8px rgba(92,161,54,0.3)" }}
           >
             {overallCompletion}%
           </span>
@@ -248,7 +264,7 @@ export function ResidentDetailPage() {
             onClick={() => setDeactivateModalOpen(true)}
             className="bg-gradient-to-b from-roof-red-light to-roof-red border-2 border-[#A82518] rounded-sm text-white shadow-[0_0_8px_rgba(211,47,35,0.3)] uppercase tracking-wider text-xs font-bold px-4 py-2"
           >
-            {resident.active ? 'Deactivate' : 'Activate'}
+            {resident.active ? "Deactivate" : "Activate"}
           </button>
         </div>
       </div>
@@ -262,10 +278,10 @@ export function ResidentDetailPage() {
             <div
               className={`absolute top-0 left-0 right-0 h-0.5 ${
                 d.completionPct >= 80
-                  ? 'bg-fantasy-green shadow-[0_0_8px_rgba(92,161,54,0.3)]'
+                  ? "bg-fantasy-green shadow-[0_0_8px_rgba(92,161,54,0.3)]"
                   : d.completionPct >= 50
-                    ? 'bg-flag-yellow shadow-[0_0_8px_rgba(244,196,48,0.3)]'
-                    : 'bg-roof-red shadow-[0_0_8px_rgba(211,47,35,0.3)]'
+                    ? "bg-flag-yellow shadow-[0_0_8px_rgba(244,196,48,0.3)]"
+                    : "bg-roof-red shadow-[0_0_8px_rgba(211,47,35,0.3)]"
               }`}
             />
             <p className="font-pixel text-[8px] text-text-bright leading-relaxed">
@@ -275,18 +291,18 @@ export function ResidentDetailPage() {
             <p
               className={`font-pixel text-lg ${
                 d.completionPct >= 80
-                  ? 'text-fantasy-green'
+                  ? "text-fantasy-green"
                   : d.completionPct >= 50
-                    ? 'text-flag-yellow'
-                    : 'text-roof-red'
+                    ? "text-flag-yellow"
+                    : "text-roof-red"
               }`}
               style={{
                 textShadow:
                   d.completionPct >= 80
-                    ? '0 0 8px rgba(92,161,54,0.3)'
+                    ? "0 0 8px rgba(92,161,54,0.3)"
                     : d.completionPct >= 50
-                      ? '0 0 8px rgba(244,196,48,0.3)'
-                      : '0 0 8px rgba(211,47,35,0.3)',
+                      ? "0 0 8px rgba(244,196,48,0.3)"
+                      : "0 0 8px rgba(211,47,35,0.3)",
               }}
             >
               {d.completionPct}%
@@ -294,7 +310,9 @@ export function ResidentDetailPage() {
             <p className="text-xs text-text-muted">
               {d.completedQuestions} / {d.totalQuestions} complete
             </p>
-            <p className="text-[11px] text-roof-red mt-1">{d.wrongPct}% wrong</p>
+            <p className="text-[11px] text-roof-red mt-1">
+              {d.wrongPct}% wrong
+            </p>
             <div className="mt-2">
               <ProgressBar pct={d.completionPct} />
             </div>
@@ -309,8 +327,15 @@ export function ResidentDetailPage() {
             <ResponsiveContainer width="100%" height="100%">
               <RadarChart data={radarData}>
                 <PolarGrid stroke="rgba(255,255,255,0.06)" />
-                <PolarAngleAxis dataKey="topic" tick={{ fill: '#AAAACC', fontSize: 10 }} />
-                <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fill: '#9098A8', fontSize: 10 }} />
+                <PolarAngleAxis
+                  dataKey="topic"
+                  tick={{ fill: "#AAAACC", fontSize: 10 }}
+                />
+                <PolarRadiusAxis
+                  angle={90}
+                  domain={[0, 100]}
+                  tick={{ fill: "#9098A8", fontSize: 10 }}
+                />
                 <Radar
                   name="Completion %"
                   dataKey="completion"
@@ -349,15 +374,25 @@ export function ResidentDetailPage() {
                 margin={{ left: 80, right: 20 }}
               >
                 <CartesianGrid stroke="rgba(255,255,255,0.04)" />
-                <XAxis type="number" tick={{ fill: '#9098A8', fontSize: 10 }} />
+                <XAxis type="number" tick={{ fill: "#9098A8", fontSize: 10 }} />
                 <YAxis
                   type="category"
                   dataKey="label"
-                  tick={{ fill: '#9098A8', fontSize: 9 }}
+                  tick={{ fill: "#9098A8", fontSize: 9 }}
                   width={75}
                 />
-                <Bar dataKey="correct" stackId="a" fill={CHART_COLORS.fantasyGreen} name="Correct" />
-                <Bar dataKey="wrong" stackId="a" fill={CHART_COLORS.roofRed} name="Wrong" />
+                <Bar
+                  dataKey="correct"
+                  stackId="a"
+                  fill={CHART_COLORS.fantasyGreen}
+                  name="Correct"
+                />
+                <Bar
+                  dataKey="wrong"
+                  stackId="a"
+                  fill={CHART_COLORS.roofRed}
+                  name="Wrong"
+                />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -405,7 +440,10 @@ export function ResidentDetailPage() {
             </thead>
             <tbody>
               {filteredAttempts.map((a) => (
-                <tr key={a.id} className="border-b border-border-dark hover:bg-[rgba(29,59,142,0.1)]">
+                <tr
+                  key={a.id}
+                  className="border-b border-border-dark hover:bg-[rgba(29,59,142,0.1)]"
+                >
                   <td className="px-3.5 py-2.5 text-xs text-text-muted font-mono">
                     {formatDate(a.created_at)}
                   </td>
@@ -416,8 +454,12 @@ export function ResidentDetailPage() {
                     {formatModuleId(a.action)}
                   </td>
                   <td className="px-3.5 py-2.5">
-                    <StatusBadge outcome={a.outcome === 'correct' ? 'correct' : 'incorrect'}>
-                      {a.outcome === 'correct' ? 'Correct' : 'Incorrect'}
+                    <StatusBadge
+                      outcome={
+                        a.outcome === "correct" ? "correct" : "incorrect"
+                      }
+                    >
+                      {a.outcome === "correct" ? "Correct" : "Incorrect"}
                     </StatusBadge>
                   </td>
                 </tr>
@@ -434,8 +476,8 @@ export function ResidentDetailPage() {
           programName={programName}
           onClose={() => setResetModalOpen(false)}
           onSuccess={(newPassword) => {
-            setResetModalOpen(false)
-            setResetResultModal(newPassword)
+            setResetModalOpen(false);
+            setResetResultModal(newPassword);
           }}
         />
       )}
@@ -444,7 +486,9 @@ export function ResidentDetailPage() {
         <Modal show onClose={() => setResetResultModal(null)}>
           <Modal.Header>New Password</Modal.Header>
           <Modal.Body>
-            <p className="text-sm text-text-muted mb-2">Copy and share with the resident.</p>
+            <p className="text-sm text-text-muted mb-2">
+              Copy and share with the resident.
+            </p>
             <div className="flex gap-2">
               <input
                 type="text"
@@ -454,8 +498,8 @@ export function ResidentDetailPage() {
               />
               <button
                 onClick={() => {
-                  navigator.clipboard.writeText(resetResultModal)
-                  showToast('Copied to clipboard', 'success')
+                  navigator.clipboard.writeText(resetResultModal);
+                  showToast("Copied to clipboard", "success");
                 }}
                 className="px-3 py-2 text-sm border-2 border-border-dark rounded-sm hover:bg-surface-inner text-text-primary"
               >
@@ -481,29 +525,38 @@ export function ResidentDetailPage() {
           programName={programName}
           onClose={() => setDeactivateModalOpen(false)}
           onSuccess={() => {
-            setDeactivateModalOpen(false)
-            fetchData()
-            showToast(resident.active ? 'Resident deactivated' : 'Resident activated', 'success')
+            setDeactivateModalOpen(false);
+            fetchData();
+            showToast(
+              resident.active ? "Resident deactivated" : "Resident activated",
+              "success",
+            );
           }}
         />
       )}
     </>
-  )
+  );
 }
 
-function ResetPasswordModal({ resident, isInspecting, programName, onClose, onSuccess }) {
-  const [loading, setLoading] = useState(false)
+function ResetPasswordModal({
+  resident,
+  isInspecting,
+  programName,
+  onClose,
+  onSuccess,
+}) {
+  const [loading, setLoading] = useState(false);
 
   async function handleConfirm() {
-    setLoading(true)
-    const newPassword = generatePassword()
-    const hash = hashSync(newPassword, 10)
+    setLoading(true);
+    const newPassword = generatePassword();
+    const hash = hashSync(newPassword, 10);
     await supabase
-      .from('residents')
+      .from("residents")
       .update({ password_hash: hash })
-      .eq('id', resident.id)
-    setLoading(false)
-    onSuccess(newPassword)
+      .eq("id", resident.id);
+    setLoading(false);
+    onSuccess(newPassword);
   }
 
   return (
@@ -516,7 +569,8 @@ function ResetPasswordModal({ resident, isInspecting, programName, onClose, onSu
           </div>
         )}
         <p className="text-sm text-text-muted">
-          Reset password for {resident.email}? They will need the new password to log in.
+          Reset password for {resident.email}? They will need the new password
+          to log in.
         </p>
       </Modal.Body>
       <Modal.Footer>
@@ -531,29 +585,35 @@ function ResetPasswordModal({ resident, isInspecting, programName, onClose, onSu
           disabled={loading}
           className="px-5 py-2.5 text-sm font-medium text-white bg-gradient-to-b from-royal-blue-light to-royal-blue border-2 border-royal-blue-dark rounded-sm"
         >
-          {loading ? 'Resetting...' : 'Reset'}
+          {loading ? "Resetting..." : "Reset"}
         </button>
       </Modal.Footer>
     </Modal>
-  )
+  );
 }
 
-function DeactivateModal({ resident, isInspecting, programName, onClose, onSuccess }) {
-  const [loading, setLoading] = useState(false)
+function DeactivateModal({
+  resident,
+  isInspecting,
+  programName,
+  onClose,
+  onSuccess,
+}) {
+  const [loading, setLoading] = useState(false);
 
   async function handleConfirm() {
-    setLoading(true)
+    setLoading(true);
     await supabase
-      .from('residents')
+      .from("residents")
       .update({ active: !resident.active })
-      .eq('id', resident.id)
-    setLoading(false)
-    onSuccess()
+      .eq("id", resident.id);
+    setLoading(false);
+    onSuccess();
   }
 
   return (
     <Modal show onClose={onClose}>
-      <Modal.Header>{resident.active ? 'Deactivate' : 'Activate'}</Modal.Header>
+      <Modal.Header>{resident.active ? "Deactivate" : "Activate"}</Modal.Header>
       <Modal.Body>
         {isInspecting && programName && (
           <div className="mb-3 p-3 bg-[rgba(244,196,48,0.08)] border border-flag-yellow rounded-sm text-sm text-flag-yellow">
@@ -578,13 +638,13 @@ function DeactivateModal({ resident, isInspecting, programName, onClose, onSucce
           disabled={loading}
           className={`px-5 py-2.5 text-sm font-medium text-white rounded-sm ${
             resident.active
-              ? 'bg-gradient-to-b from-roof-red-light to-roof-red border-2 border-[#A82518]'
-              : 'bg-gradient-to-b from-royal-blue-light to-royal-blue border-2 border-royal-blue-dark'
+              ? "bg-gradient-to-b from-roof-red-light to-roof-red border-2 border-[#A82518]"
+              : "bg-gradient-to-b from-royal-blue-light to-royal-blue border-2 border-royal-blue-dark"
           }`}
         >
-          {loading ? 'Saving...' : resident.active ? 'Deactivate' : 'Activate'}
+          {loading ? "Saving..." : resident.active ? "Deactivate" : "Activate"}
         </button>
       </Modal.Footer>
     </Modal>
-  )
+  );
 }

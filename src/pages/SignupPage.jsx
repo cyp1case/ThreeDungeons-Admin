@@ -1,87 +1,90 @@
-import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { supabase } from '../lib/supabase'
-import { useAuth } from '../contexts/AuthContext'
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { supabase } from "../lib/supabase";
+import { useAuth } from "../contexts/AuthContext";
 
 export function SignupPage() {
-  const [inviteCode, setInviteCode] = useState('')
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
-  const navigate = useNavigate()
-  const { session, loading: authLoading } = useAuth()
+  const [inviteCode, setInviteCode] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+  const { session, loading: authLoading } = useAuth();
 
   if (authLoading) {
     return (
       <div className="min-h-screen bg-surface-page flex items-center justify-center">
         <div className="w-8 h-8 border-4 border-border-dark border-t-royal-blue rounded-full animate-spin" />
       </div>
-    )
+    );
   }
 
   if (session) {
-    navigate('/', { replace: true })
-    return null
+    navigate("/", { replace: true });
+    return null;
   }
 
   async function handleSubmit(e) {
-    e.preventDefault()
-    setError('')
+    e.preventDefault();
+    setError("");
     if (password !== confirmPassword) {
-      setError('Passwords do not match')
-      return
+      setError("Passwords do not match");
+      return;
     }
-    setLoading(true)
+    setLoading(true);
 
-    const normalizedCode = inviteCode.trim().replace(/-/g, '')
+    const normalizedCode = inviteCode.trim().replace(/-/g, "");
     const { data: verifyData, error: verifyErr } = await supabase.rpc(
-      'verify_invite_code',
-      { given_code: normalizedCode }
-    )
+      "verify_invite_code",
+      { given_code: normalizedCode },
+    );
 
     if (verifyErr || !verifyData?.length) {
-      setError('Invalid or expired invite code.')
-      setLoading(false)
-      return
+      setError("Invalid or expired invite code.");
+      setLoading(false);
+      return;
     }
 
-    const { program_id: _program_id, invite_id } = verifyData[0]
+    const { program_id: _program_id, invite_id } = verifyData[0];
 
     const { data: authData, error: signUpErr } = await supabase.auth.signUp({
       email,
       password,
-    })
+    });
 
     if (signUpErr) {
-      if (signUpErr.message?.includes('already registered')) {
-        setError('This email is already registered. Sign in instead.')
+      if (signUpErr.message?.includes("already registered")) {
+        setError("This email is already registered. Sign in instead.");
       } else {
-        setError(signUpErr.message || 'Sign up failed')
+        setError(signUpErr.message || "Sign up failed");
       }
-      setLoading(false)
-      return
+      setLoading(false);
+      return;
     }
 
     if (!authData.user) {
-      setError('Sign up failed. Please try again.')
-      setLoading(false)
-      return
+      setError("Sign up failed. Please try again.");
+      setLoading(false);
+      return;
     }
 
-    const { error: completeErr } = await supabase.rpc('complete_leader_signup', {
-      invite_id_param: invite_id,
-    })
+    const { error: completeErr } = await supabase.rpc(
+      "complete_leader_signup",
+      {
+        invite_id_param: invite_id,
+      },
+    );
 
     if (completeErr) {
-      setError('Failed to complete signup. Contact support.')
-      setLoading(false)
-      return
+      setError("Failed to complete signup. Contact support.");
+      setLoading(false);
+      return;
     }
 
-    setLoading(false)
-    navigate('/')
+    setLoading(false);
+    navigate("/");
   }
 
   return (
@@ -89,7 +92,7 @@ export function SignupPage() {
       <div className="bg-surface-card border-2 border-border-dark rounded-sm p-6 sm:p-8 w-full max-w-md mx-4 shadow-[0_4px_16px_rgba(0,0,0,0.3)]">
         <h1
           className="font-pixel text-xs text-flag-yellow text-center leading-relaxed"
-          style={{ textShadow: '0 0 12px rgba(244,196,48,0.3)' }}
+          style={{ textShadow: "0 0 12px rgba(244,196,48,0.3)" }}
         >
           THREEDUNGEONS
         </h1>
@@ -154,11 +157,11 @@ export function SignupPage() {
             disabled={loading}
             className="w-full text-white bg-gradient-to-b from-royal-blue-light to-royal-blue border-2 border-royal-blue-dark rounded-sm shadow-[0_0_8px_rgba(29,59,142,0.4)] font-bold uppercase tracking-wider text-sm px-5 py-2.5"
           >
-            {loading ? 'Creating account...' : 'Create Account'}
+            {loading ? "Creating account..." : "Create Account"}
           </button>
         </form>
         <p className="text-sm text-text-muted mt-4 text-center">
-          Already have an account?{' '}
+          Already have an account?{" "}
           <Link to="/login" className="text-royal-blue-light hover:underline">
             Sign in
           </Link>
@@ -168,5 +171,5 @@ export function SignupPage() {
         )}
       </div>
     </div>
-  )
+  );
 }

@@ -1,7 +1,9 @@
 const styles = {
-  correct: 'bg-[rgba(92,161,54,0.15)] text-fantasy-green border-[rgba(92,161,54,0.3)]',
-  incorrect: 'bg-[rgba(211,47,35,0.15)] text-roof-red border-[rgba(211,47,35,0.3)]',
-}
+  correct:
+    "bg-[rgba(92,161,54,0.15)] text-fantasy-green border-[rgba(92,161,54,0.3)]",
+  incorrect:
+    "bg-[rgba(211,47,35,0.15)] text-roof-red border-[rgba(211,47,35,0.3)]",
+};
 
 export function StatusBadge({ outcome, children }) {
   return (
@@ -10,5 +12,5 @@ export function StatusBadge({ outcome, children }) {
     >
       {children}
     </span>
-  )
+  );
 }
