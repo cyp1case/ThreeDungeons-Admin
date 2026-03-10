@@ -65,6 +65,10 @@ jobs:
         run: npm ci
 
       - name: Build production
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_SUPER_ADMIN_EMAIL: ${{ secrets.VITE_SUPER_ADMIN_EMAIL }}
         run: npm run build
 
       - name: Checkout staging branch
@@ -81,6 +85,9 @@ jobs:
         working-directory: staging-src
         env:
           BUILD_TARGET: staging
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_SUPER_ADMIN_EMAIL: ${{ secrets.VITE_SUPER_ADMIN_EMAIL }}
         run: npm run build:staging
 
       - name: Merge staging into deployment
