@@ -1,37 +1,17 @@
-import { useEffect, useState } from 'react'
-import { Link, Outlet, useParams, useNavigate } from 'react-router-dom'
-import { supabase } from '../lib/supabase'
+import { useEffect } from 'react'
+import { Link, Outlet, useNavigate } from 'react-router-dom'
+import { useSelectedProgram } from '../contexts/SelectedProgramContext'
 
 export function InspectLayout() {
-  const { programId } = useParams()
   const navigate = useNavigate()
-  const [programName, setProgramName] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const { isInspecting, programExists, programLoading, programName } = useSelectedProgram()
 
   useEffect(() => {
-    if (!programId) {
-      setLoading(false)
-      return
-    }
-    let cancelled = false
-    supabase
-      .from('programs')
-      .select('id, name')
-      .eq('id', programId)
-      .single()
-      .then(({ data, error }) => {
-        if (cancelled) return
-        if (error || !data) {
-          navigate('/admin/programs', { replace: true })
-          return
-        }
-        setProgramName(data.name)
-        setLoading(false)
-      })
-    return () => { cancelled = true }
-  }, [programId, navigate])
+    if (!isInspecting || programLoading || programExists) return
+    navigate('/admin/programs', { replace: true })
+  }, [isInspecting, navigate, programExists, programLoading])
 
-  if (loading) {
+  if (programLoading) {
     return (
       <div className="flex justify-center py-12">
         <div className="w-8 h-8 border-4 border-border-dark border-t-royal-blue rounded-full animate-spin" />

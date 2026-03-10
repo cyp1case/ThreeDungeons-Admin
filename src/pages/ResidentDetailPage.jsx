@@ -71,13 +71,19 @@ export function ResidentDetailPage() {
 
   async function fetchData() {
     setLoading(true)
-    const { data: resData } = await supabase
+    const { data: resData, error: residentError } = await supabase
       .from('residents')
       .select('*')
       .eq('id', id)
       .eq('program_id', effectiveProgramId)
       .single()
     setResident(resData)
+    if (residentError || !resData) {
+      setCohorts([])
+      setAttempts([])
+      setLoading(false)
+      return
+    }
 
     const { data: cohortData } = await supabase
       .from('resident_cohorts')

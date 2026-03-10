@@ -12,6 +12,8 @@ export function SelectedProgramProvider({ children }) {
   const { profile, isSuperAdmin } = useAuth()
   const location = useLocation()
   const [programName, setProgramName] = useState(null)
+  const [programLoading, setProgramLoading] = useState(false)
+  const [programExists, setProgramExists] = useState(true)
 
   const isSuper = isSuperAdmin()
   const programIdFromUrl = (location.pathname.match(INSPECT_PATH_REGEX) ?? [])[1]
@@ -25,17 +27,29 @@ export function SelectedProgramProvider({ children }) {
   useEffect(() => {
     if (!programIdFromUrl) {
       setProgramName(null)
+      setProgramLoading(false)
+      setProgramExists(true)
       return
     }
     let cancelled = false
+    setProgramLoading(true)
+    setProgramExists(true)
     supabase
       .from('programs')
       .select('name')
       .eq('id', programIdFromUrl)
       .single()
-      .then(({ data }) => {
-        if (!cancelled && data) setProgramName(data.name)
-        else setProgramName(null)
+      .then(({ data, error }) => {
+        if (cancelled) return
+        if (error || !data) {
+          setProgramName(null)
+          setProgramExists(false)
+          setProgramLoading(false)
+          return
+        }
+        setProgramName(data.name)
+        setProgramExists(true)
+        setProgramLoading(false)
       })
     return () => { cancelled = true }
   }, [programIdFromUrl])
@@ -51,6 +65,8 @@ export function SelectedProgramProvider({ children }) {
         programName: isInspecting ? programName : null,
         isInspecting,
         linkPrefix,
+        programLoading,
+        programExists,
       }}
     >
       {children}

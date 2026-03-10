@@ -98,7 +98,7 @@ export function DungeonsPage() {
     }
   }
 
-  if (!profileLoading && !profile?.program_id) {
+  if (!profileLoading && !effectiveProgramId) {
     return (
       <Card>
         <p className="text-text-muted text-sm py-12 text-center">

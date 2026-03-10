@@ -1,33 +1,19 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
+import { useSelectedProgram } from '../contexts/SelectedProgramContext'
 
 const INSPECT_PATH_REGEX = /^\/admin\/programs\/([^/]+)/
 
 export function AppShell() {
-  const { profile, signOut, isSuperAdmin } = useAuth()
+  const { profile, signOut, isSuperAdmin, profileLoading } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const programId = (location.pathname.match(INSPECT_PATH_REGEX) ?? [])[1]
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [inspectProgramName, setInspectProgramName] = useState(null)
+  const { programName } = useSelectedProgram()
 
   const isInspecting = isSuperAdmin() && programId
-
-  useEffect(() => {
-    if (!isInspecting || !programId) return
-    let cancelled = false
-    supabase
-      .from('programs')
-      .select('name')
-      .eq('id', programId)
-      .single()
-      .then(({ data }) => {
-        if (!cancelled && data) setInspectProgramName(data.name)
-      })
-    return () => { cancelled = true }
-  }, [isInspecting, programId])
 
   const handleSignOut = async () => {
     await signOut()
@@ -62,6 +48,14 @@ export function AppShell() {
   }
 
   const navItems = isInspecting ? inspectNavItems : leaderNavItems
+
+  if (profileLoading) {
+    return (
+      <div className="min-h-screen bg-surface-page flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-border-dark border-t-royal-blue rounded-full animate-spin" />
+      </div>
+    )
+  }
 
   return (
     <>
@@ -111,9 +105,9 @@ export function AppShell() {
               >
                 Back to Programs
               </Link>
-              {inspectProgramName && (
+              {programName && (
                 <p className="text-[10px] text-text-muted px-3.5 mb-3 truncate">
-                  Inspecting: {inspectProgramName}
+                  Inspecting: {programName}
                 </p>
               )}
             </>

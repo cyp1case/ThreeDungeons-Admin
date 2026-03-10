@@ -25,13 +25,19 @@ export function CohortDetailPage() {
 
   async function fetchData() {
     setLoading(true)
-    const { data: cohortData } = await supabase
+    const { data: cohortData, error: cohortError } = await supabase
       .from('cohorts')
       .select('*')
       .eq('id', id)
       .eq('program_id', effectiveProgramId)
       .single()
     setCohort(cohortData)
+    if (cohortError || !cohortData) {
+      setResidents([])
+      setAttempts([])
+      setLoading(false)
+      return
+    }
 
     const { data: rcData } = await supabase
       .from('resident_cohorts')
