@@ -1,16 +1,8 @@
 name: Deploy to GitHub Pages
 
 on:
-  pull_request:
   push:
     branches: [main, Admin-Panel]
-  workflow_dispatch:
-    inputs:
-      staging_branch:
-        description: 'Branch to deploy as staging'
-        required: true
-        default: 'Admin-Panel'
-        type: string
 
 permissions:
   contents: read
@@ -22,35 +14,14 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  build-and-test:
-    name: Build and Test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.inputs.staging_branch || github.ref }}
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: "npm"
-
-      - run: npm ci
-      - run: npm run lint
-
   build:
-    needs: build-and-test
-    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     env:
       VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
       VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
       VITE_SUPER_ADMIN_EMAIL: ${{ secrets.VITE_SUPER_ADMIN_EMAIL }}
     steps:
-      - name: Checkout main
-        uses: actions/checkout@v4
-        with:
-          ref: main
+      - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
@@ -60,28 +31,6 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: cp dist/index.html dist/404.html
-
-      - name: Checkout staging branch
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.inputs.staging_branch || 'Admin-Panel' }}
-          path: staging-src
-
-      - name: Install dependencies (staging)
-        working-directory: staging-src
-        run: npm ci
-
-      - name: Build staging
-        working-directory: staging-src
-        env:
-          BUILD_TARGET: staging
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
-          VITE_SUPER_ADMIN_EMAIL: ${{ secrets.VITE_SUPER_ADMIN_EMAIL }}
-        run: npm run build:staging
-
-      - name: Merge staging into deployment
-        run: cp -r staging-src/dist/staging dist/
 
       - uses: actions/upload-pages-artifact@v4
         with:
