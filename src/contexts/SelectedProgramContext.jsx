@@ -26,9 +26,6 @@ export function SelectedProgramProvider({ children }) {
 
   useEffect(() => {
     if (!programIdFromUrl) {
-      setProgramName(null)
-      setProgramLoading(false)
-      setProgramExists(true)
       return
     }
     let cancelled = false
@@ -58,15 +55,19 @@ export function SelectedProgramProvider({ children }) {
     ? `/admin/programs/${effectiveProgramId}`
     : ''
 
+  const resolvedProgramName = isInspecting ? programName : null
+  const resolvedProgramLoading = isInspecting ? programLoading : false
+  const resolvedProgramExists = isInspecting ? programExists : true
+
   return (
     <SelectedProgramContext.Provider
       value={{
         effectiveProgramId,
-        programName: isInspecting ? programName : null,
+        programName: resolvedProgramName,
         isInspecting,
         linkPrefix,
-        programLoading,
-        programExists,
+        programLoading: resolvedProgramLoading,
+        programExists: resolvedProgramExists,
       }}
     >
       {children}
