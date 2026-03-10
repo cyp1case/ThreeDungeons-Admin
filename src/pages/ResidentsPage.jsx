@@ -62,7 +62,7 @@ export function ResidentsPage() {
 
   useEffect(() => {
     if (!profile?.program_id) return
-    fetchResidents()
+    fetchResidents() // eslint-disable-line react-hooks/set-state-in-effect -- data fetch
     fetchCohorts()
   }, [profile?.program_id])
 

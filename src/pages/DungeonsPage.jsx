@@ -38,10 +38,7 @@ export function DungeonsPage() {
 
   useEffect(() => {
     if (profileLoading) return
-    if (!profile?.program_id) {
-      setLoading(false)
-      return
-    }
+    if (!profile?.program_id) return
     fetchData() // eslint-disable-line react-hooks/set-state-in-effect -- data fetch
   }, [profile?.program_id, profileLoading])
 
@@ -97,6 +94,16 @@ export function DungeonsPage() {
         attempts: attemptCountByQuestion[qid] ?? 0,
       })
     }
+  }
+
+  if (!profileLoading && !profile?.program_id) {
+    return (
+      <Card>
+        <p className="text-text-muted text-sm py-12 text-center">
+          Select a program to view dungeon analytics.
+        </p>
+      </Card>
+    )
   }
 
   if (loading) {
