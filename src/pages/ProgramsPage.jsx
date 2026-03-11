@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { useToast } from "../contexts/ToastContext";
-import { Modal, Dropdown } from "flowbite-react";
+import { Modal } from "flowbite-react";
 import { Card } from "../components/Card";
 
 export function ProgramsPage() {
@@ -99,15 +99,14 @@ export function ProgramsPage() {
                   <td className="px-3.5 py-2.5">{leaderCounts[p.id] ?? 0}</td>
                   <td className="px-3.5 py-2.5">{residentCounts[p.id] ?? 0}</td>
                   <td className="px-3.5 py-2.5">
-                    <Dropdown label="•••" dismissOnClick>
-                      <Dropdown.Item
-                        onClick={() =>
-                          navigate(`/admin/programs/${p.id}/dashboard`)
-                        }
-                      >
-                        Inspect
-                      </Dropdown.Item>
-                    </Dropdown>
+                    <button
+                      onClick={() =>
+                        navigate(`/admin/programs/${p.id}/dashboard`)
+                      }
+                      className="px-3 py-1.5 text-white bg-gradient-to-b from-fantasy-green-light to-fantasy-green border-2 border-[#4A8A2C] rounded-sm shadow-[0_0_8px_rgba(92,161,54,0.3)] uppercase tracking-wider text-[10px] font-bold"
+                    >
+                      View Program
+                    </button>
                   </td>
                 </tr>
               ))}

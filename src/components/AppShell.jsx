@@ -3,17 +3,12 @@ import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { useSelectedProgram } from "../contexts/SelectedProgramContext";
 
-const INSPECT_PATH_REGEX = /^\/admin\/programs\/([^/]+)/;
-
 export function AppShell() {
   const { profile, signOut, isSuperAdmin, profileLoading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const programId = (location.pathname.match(INSPECT_PATH_REGEX) ?? [])[1];
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { programName } = useSelectedProgram();
-
-  const isInspecting = isSuperAdmin() && programId;
+  const { programName, isInspecting, linkPrefix } = useSelectedProgram();
 
   const handleSignOut = async () => {
     await signOut();
@@ -27,12 +22,12 @@ export function AppShell() {
     { path: "/dungeons", label: "Dungeons" },
   ];
 
-  const inspectNavItems = programId
+  const inspectNavItems = isInspecting
     ? [
-        { path: `/admin/programs/${programId}/dashboard`, label: "Dashboard" },
-        { path: `/admin/programs/${programId}/residents`, label: "Residents" },
-        { path: `/admin/programs/${programId}/cohorts`, label: "Cohorts" },
-        { path: `/admin/programs/${programId}/dungeons`, label: "Dungeons" },
+        { path: `${linkPrefix}/dashboard`, label: "Dashboard" },
+        { path: `${linkPrefix}/residents`, label: "Residents" },
+        { path: `${linkPrefix}/cohorts`, label: "Cohorts" },
+        { path: `${linkPrefix}/dungeons`, label: "Dungeons" },
       ]
     : [];
 
@@ -47,7 +42,26 @@ export function AppShell() {
     return location.pathname.startsWith(path);
   };
 
-  const navItems = isInspecting ? inspectNavItems : leaderNavItems;
+  const renderNavLink = (item) => (
+    <li key={item.path}>
+      <Link
+        to={item.path}
+        className={`block py-2.5 pl-6 pr-3.5 rounded-sm font-pixel text-[9px] uppercase tracking-wider leading-relaxed ${
+          isActive(item.path)
+            ? "bg-royal-blue text-flag-yellow border-2 border-royal-blue-light shadow-[0_0_12px_rgba(29,59,142,0.4)]"
+            : "text-text-muted border-2 border-transparent hover:bg-white/5 hover:text-text-bright hover:border-border-accent"
+        }`}
+        style={
+          isActive(item.path)
+            ? { textShadow: "0 0 8px rgba(244,196,48,0.3)" }
+            : {}
+        }
+        onClick={() => setSidebarOpen(false)}
+      >
+        {item.label}
+      </Link>
+    </li>
+  );
 
   if (profileLoading) {
     return (
@@ -102,55 +116,46 @@ export function AppShell() {
           </button>
         </div>
         <div className="flex-1 overflow-y-auto px-3 pb-4">
-          <div className="font-sans text-[11px] font-bold uppercase tracking-[2px] text-text-muted px-3.5 pt-5 pb-2">
-            Navigate
-          </div>
-          {isInspecting && (
+          {isInspecting ? (
             <>
-              <Link
-                to="/admin/programs"
-                className="block py-2 text-xs text-text-muted hover:text-text-bright mb-2"
-                onClick={() => setSidebarOpen(false)}
-              >
-                Back to Programs
-              </Link>
               {programName && (
-                <p className="text-[10px] text-text-muted px-3.5 mb-3 truncate">
-                  Inspecting: {programName}
-                </p>
+                <div
+                  className="font-pixel text-[9px] text-flag-yellow px-3.5 pt-5 pb-2 truncate"
+                  style={{
+                    textShadow:
+                      "0 0 8px rgba(244,196,48,0.3), 2px 2px 0 rgba(0,0,0,0.5)",
+                  }}
+                >
+                  {programName}
+                </div>
               )}
+              <ul className="space-y-1">
+                {inspectNavItems.map(renderNavLink)}
+              </ul>
+              <hr className="border-border-dark my-3" />
+              <div className="font-sans text-[11px] font-bold uppercase tracking-[2px] text-text-muted px-3.5 pb-2">
+                Admin
+              </div>
+              <ul className="space-y-1">{adminItems.map(renderNavLink)}</ul>
+            </>
+          ) : (
+            <>
+              <div className="font-sans text-[11px] font-bold uppercase tracking-[2px] text-text-muted px-3.5 pt-5 pb-2">
+                Navigate
+              </div>
+              <ul className="space-y-1">
+                {(isSuperAdmin() ? adminItems : leaderNavItems).map(
+                  renderNavLink,
+                )}
+              </ul>
             </>
           )}
-          <ul className="space-y-1">
-            {(isSuperAdmin() && !isInspecting ? adminItems : navItems).map(
-              (item) => (
-                <li key={item.path}>
-                  <Link
-                    to={item.path}
-                    className={`block py-2.5 pl-6 pr-3.5 rounded-sm font-pixel text-[9px] uppercase tracking-wider leading-relaxed ${
-                      isActive(item.path)
-                        ? "bg-royal-blue text-flag-yellow border-2 border-royal-blue-light shadow-[0_0_12px_rgba(29,59,142,0.4)]"
-                        : "text-text-muted border-2 border-transparent hover:bg-white/5 hover:text-text-bright hover:border-border-accent"
-                    }`}
-                    style={
-                      isActive(item.path)
-                        ? { textShadow: "0 0 8px rgba(244,196,48,0.3)" }
-                        : {}
-                    }
-                    onClick={() => setSidebarOpen(false)}
-                  >
-                    {item.label}
-                  </Link>
-                </li>
-              ),
-            )}
-          </ul>
         </div>
         <div className="px-5 py-3 border-t border-border-dark mt-auto">
           <p className="text-xs text-text-muted truncate">{profile?.email}</p>
           <button
             onClick={handleSignOut}
-            className="text-xs text-text-muted hover:text-text-bright mt-1"
+            className="w-full mt-2 px-4 py-2 text-white bg-gradient-to-b from-roof-red-light to-roof-red border-2 border-[#A82518] rounded-sm shadow-[0_0_8px_rgba(211,47,35,0.3)] uppercase tracking-wider text-[10px] font-bold"
           >
             Sign Out
           </button>
