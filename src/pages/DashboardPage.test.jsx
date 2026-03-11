@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { DashboardPage } from "./DashboardPage";
-import { createSupabaseMock, setSupabaseMockData } from "../test/mocks/supabase";
+import { setSupabaseMockData } from "../test/mocks/supabase";
 
 vi.mock("../lib/supabase", async () => {
   const { createSupabaseMock } = await import("../test/mocks/supabase.js");
