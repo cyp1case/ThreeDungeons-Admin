@@ -132,11 +132,6 @@ export function AppShell() {
               <ul className="space-y-1">
                 {inspectNavItems.map(renderNavLink)}
               </ul>
-              <hr className="border-border-dark my-3" />
-              <div className="font-sans text-[11px] font-bold uppercase tracking-[2px] text-text-muted px-3.5 pb-2">
-                Admin
-              </div>
-              <ul className="space-y-1">{adminItems.map(renderNavLink)}</ul>
             </>
           ) : (
             <>

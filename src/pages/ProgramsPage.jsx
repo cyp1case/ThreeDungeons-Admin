@@ -103,7 +103,7 @@ export function ProgramsPage() {
                       onClick={() =>
                         navigate(`/admin/programs/${p.id}/dashboard`)
                       }
-                      className="px-3 py-1.5 text-white bg-gradient-to-b from-fantasy-green-light to-fantasy-green border-2 border-[#4A8A2C] rounded-sm shadow-[0_0_8px_rgba(92,161,54,0.3)] uppercase tracking-wider text-[10px] font-bold"
+                      className="px-3 py-1.5 text-white bg-gradient-to-b from-fantasy-green-light to-fantasy-green border-2 border-[#4A8A2C] rounded-sm shadow-[0_0_8px_rgba(92,161,54,0.3)] uppercase tracking-wider text-xs font-bold whitespace-nowrap"
                     >
                       View Program
                     </button>
