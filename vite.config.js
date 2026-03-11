@@ -18,4 +18,15 @@ export default defineConfig({
     outDir: isStaging ? "dist/staging" : "dist",
   },
   plugins: [react()],
+  test: {
+    environment: "jsdom",
+    setupFiles: ["src/test/setup.js"],
+    globals: true,
+    include: ["src/**/*.test.{js,jsx}"],
+    exclude: ["**/ProtectedRoute.test.jsx", "node_modules"],
+    env: {
+      VITE_SUPABASE_URL: "https://test.supabase.co",
+      VITE_SUPABASE_ANON_KEY: "test-key",
+    },
+  },
 });

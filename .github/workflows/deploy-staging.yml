@@ -26,6 +26,9 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: Run tests
+        run: npm test
+
   deploy:
     name: Deploy to Staging
     needs: build-and-test

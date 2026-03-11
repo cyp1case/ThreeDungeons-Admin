@@ -2,10 +2,11 @@ name: CI
 
 on:
   push:
+    branches-ignore: [main]
 
 jobs:
-  lint:
-    name: Lint
+  ci:
+    name: Lint and Test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -23,3 +24,6 @@ jobs:
 
       - name: Lint
         run: npm run lint
+
+      - name: Run tests
+        run: npm test
