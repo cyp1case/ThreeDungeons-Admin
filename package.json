@@ -9,7 +9,11 @@
     "build:staging": "cross-env BUILD_TARGET=staging vite build",
     "build:all": "npm run build && npm run build:staging",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "coverage": "vitest run --coverage",
+    "mutate": "stryker run"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.47.10",
@@ -22,6 +26,12 @@
     "recharts": "^3.8.0"
   },
   "devDependencies": {
+    "@stryker-mutator/core": "^9.0.0",
+    "@stryker-mutator/vitest-runner": "^9.0.0",
+    "@testing-library/jest-dom": "^6.6.0",
+    "@testing-library/react": "^16.0.0",
+    "@testing-library/user-event": "^14.5.0",
+    "@vitest/coverage-v8": "^2.1.0",
     "@eslint/js": "^9.39.1",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
@@ -35,6 +45,8 @@
     "postcss": "^8.4.49",
     "supabase": "^2.76.17",
     "tailwindcss": "^3.4.15",
-    "vite": "^7.3.1"
+    "vite": "^7.3.1",
+    "vitest": "^2.1.0",
+    "jsdom": "^25.0.0"
   }
 }

@@ -25,6 +25,9 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: Run tests
+        run: npm test
+
   deploy:
     name: Deploy to Production
     needs: build-and-test
