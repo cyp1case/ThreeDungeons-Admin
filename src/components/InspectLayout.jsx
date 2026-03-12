@@ -22,15 +22,21 @@ export function InspectLayout() {
 
   return (
     <>
-      <div className="sticky top-0 z-10 -mx-7 -mt-7 mb-6 px-7 py-3 bg-surface-card border-l-4 border-flag-yellow flex items-center justify-between gap-4">
-        <span className="font-sans text-sm text-text-primary">
-          Inspecting: <strong>{programName}</strong>
+      <div className="sticky top-0 z-10 -mx-7 -mt-7 mb-6 px-7 py-3 bg-gradient-to-b from-roof-red-light to-roof-red border-b-[3px] border-[#A82518] flex items-center justify-between gap-4">
+        <span
+          className="font-pixel text-[10px] text-white uppercase tracking-wider"
+          style={{
+            textShadow:
+              "0 0 8px rgba(255,255,255,0.3), 2px 2px 0 rgba(0,0,0,0.5)",
+          }}
+        >
+          {programName}
         </span>
         <Link
           to="/admin/programs"
-          className="text-sm text-royal-blue-light hover:text-royal-blue hover:underline"
+          className="px-3 py-1.5 text-white bg-surface-sidebar/60 border-2 border-white/30 rounded-sm uppercase tracking-wider text-[10px] font-bold hover:bg-surface-sidebar"
         >
-          Back to Programs
+          Exit Program View
         </Link>
       </div>
       <Outlet />
