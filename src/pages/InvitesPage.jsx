@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { useToast } from "../contexts/ToastContext";
+import { useAuth } from "../contexts/AuthContext";
+import { useSelectedProgram } from "../contexts/SelectedProgramContext";
 import { Modal } from "flowbite-react";
 import { Card } from "../components/Card";
 import { StatusBadge } from "../components/StatusBadge";
@@ -15,6 +17,8 @@ function generateCode() {
 
 export function InvitesPage() {
   const { showToast } = useToast();
+  const { isSuperAdmin } = useAuth();
+  const { effectiveProgramId } = useSelectedProgram();
   const [invites, setInvites] = useState([]);
   const [programs, setPrograms] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -22,17 +26,31 @@ export function InvitesPage() {
 
   async function fetchData() {
     setLoading(true);
-    const { data: progData } = await supabase
-      .from("programs")
-      .select("id, name")
-      .order("name");
-    const programsList = progData ?? [];
-    setPrograms(programsList);
-
-    const { data: invData } = await supabase
+    const isSuper = isSuperAdmin();
+    let programsList = [];
+    let invQuery = supabase
       .from("invite_codes")
       .select("*")
       .order("created_at", { ascending: false });
+
+    if (isSuper) {
+      const { data: progData } = await supabase
+        .from("programs")
+        .select("id, name")
+        .order("name");
+      programsList = progData ?? [];
+    } else if (effectiveProgramId) {
+      const { data: progData } = await supabase
+        .from("programs")
+        .select("id, name")
+        .eq("id", effectiveProgramId);
+      programsList = progData ?? [];
+      invQuery = invQuery.eq("program_id", effectiveProgramId);
+    }
+
+    setPrograms(programsList);
+
+    const { data: invData } = await invQuery;
     const progMap = Object.fromEntries(programsList.map((p) => [p.id, p.name]));
     setInvites(
       (invData ?? []).map((inv) => ({
@@ -45,7 +63,7 @@ export function InvitesPage() {
 
   useEffect(() => {
     fetchData(); // eslint-disable-line react-hooks/set-state-in-effect -- data fetch
-  }, []);
+  }, [effectiveProgramId]); // eslint-disable-line react-hooks/exhaustive-deps -- fetchData depends on isSuperAdmin, effectiveProgramId
 
   return (
     <>
@@ -126,6 +144,7 @@ export function InvitesPage() {
         open={generateModalOpen}
         onClose={() => setGenerateModalOpen(false)}
         programs={programs}
+        programIdForLeader={!isSuperAdmin() ? effectiveProgramId : null}
         onSuccess={() => {
           fetchData();
           setGenerateModalOpen(false);
@@ -140,6 +159,7 @@ function GenerateInviteModal({
   open,
   onClose,
   programs,
+  programIdForLeader,
   onSuccess,
   showToast,
 }) {
@@ -147,15 +167,17 @@ function GenerateInviteModal({
   const [loading, setLoading] = useState(false);
   const [generatedCode, setGeneratedCode] = useState(null);
 
+  const effectiveProgramId = programIdForLeader ?? programId;
+
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!programId) return;
+    if (!effectiveProgramId) return;
     setLoading(true);
     const code = generateCode();
     const codeStored = code.replace("-", "");
     const { error } = await supabase.from("invite_codes").insert({
       code: codeStored,
-      program_id: programId,
+      program_id: effectiveProgramId,
     });
     setLoading(false);
     if (error) {
@@ -212,24 +234,26 @@ function GenerateInviteModal({
       ) : (
         <form onSubmit={handleSubmit}>
           <Modal.Body>
-            <div>
-              <label className="block text-sm font-medium text-gray-900 mb-1">
-                Program
-              </label>
-              <select
-                value={programId}
-                onChange={(e) => setProgramId(e.target.value)}
-                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5"
-                required
-              >
-                <option value="">Select a program</option>
-                {programs.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {!programIdForLeader && (
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-1">
+                  Program
+                </label>
+                <select
+                  value={programId}
+                  onChange={(e) => setProgramId(e.target.value)}
+                  className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5"
+                  required
+                >
+                  <option value="">Select a program</option>
+                  {programs.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </Modal.Body>
           <Modal.Footer>
             <button
@@ -241,7 +265,7 @@ function GenerateInviteModal({
             </button>
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !effectiveProgramId}
               className="px-5 py-2.5 text-sm font-medium text-white bg-primary-700 rounded-lg hover:bg-primary-800"
             >
               {loading ? "Generating..." : "Generate"}

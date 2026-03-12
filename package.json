@@ -13,7 +13,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "coverage": "vitest run --coverage",
-    "mutate": "stryker run"
+    "mutate": "stryker run",
+    "push:staging": "supabase link --project-ref pwbpqobeqerzgterheis && supabase db push",
+    "push:production": "supabase link --project-ref hfutlljwrgjfjlaqbjqb && supabase db push"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.47.10",
