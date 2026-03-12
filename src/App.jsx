@@ -42,6 +42,9 @@ const ProgramsPage = lazy(() =>
 const InvitesPage = lazy(() =>
   import("./pages/InvitesPage").then((m) => ({ default: m.InvitesPage })),
 );
+const LeadersPage = lazy(() =>
+  import("./pages/LeadersPage").then((m) => ({ default: m.LeadersPage })),
+);
 const GameSettingsPage = lazy(() =>
   import("./pages/GameSettingsPage").then((m) => ({
     default: m.GameSettingsPage,
@@ -122,6 +125,14 @@ export default function App() {
                   }
                 />
                 <Route
+                  path="/leaders"
+                  element={
+                    <SuperadminRedirectGuard>
+                      <LeadersPage />
+                    </SuperadminRedirectGuard>
+                  }
+                />
+                <Route
                   path="/admin/programs"
                   element={
                     <AdminRoute>
@@ -147,15 +158,9 @@ export default function App() {
                   <Route path="cohorts" element={<CohortsPage />} />
                   <Route path="cohorts/:id" element={<CohortDetailPage />} />
                   <Route path="dungeons" element={<DungeonsPage />} />
+                  <Route path="leaders" element={<LeadersPage />} />
                 </Route>
-                <Route
-                  path="/admin/invites"
-                  element={
-                    <AdminRoute>
-                      <InvitesPage />
-                    </AdminRoute>
-                  }
-                />
+                <Route path="/admin/invites" element={<InvitesPage />} />
                 <Route
                   path="/admin/game-settings"
                   element={

@@ -13,6 +13,10 @@ export function ProgramsPage() {
   const [residentCounts, setResidentCounts] = useState({});
   const [loading, setLoading] = useState(true);
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [programToEdit, setProgramToEdit] = useState(null);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [programToDelete, setProgramToDelete] = useState(null);
 
   async function fetchData() {
     setLoading(true);
@@ -84,7 +88,7 @@ export function ProgramsPage() {
                 <th className="px-3.5 py-2.5">Program Name</th>
                 <th className="px-3.5 py-2.5">Leaders</th>
                 <th className="px-3.5 py-2.5">Residents</th>
-                <th className="px-3.5 py-2.5 w-16">Actions</th>
+                <th className="px-3.5 py-2.5">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -99,14 +103,34 @@ export function ProgramsPage() {
                   <td className="px-3.5 py-2.5">{leaderCounts[p.id] ?? 0}</td>
                   <td className="px-3.5 py-2.5">{residentCounts[p.id] ?? 0}</td>
                   <td className="px-3.5 py-2.5">
-                    <button
-                      onClick={() =>
-                        navigate(`/admin/programs/${p.id}/dashboard`)
-                      }
-                      className="px-3 py-1.5 text-white bg-gradient-to-b from-fantasy-green-light to-fantasy-green border-2 border-[#4A8A2C] rounded-sm shadow-[0_0_8px_rgba(92,161,54,0.3)] uppercase tracking-wider text-xs font-bold whitespace-nowrap"
-                    >
-                      View Program
-                    </button>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={() =>
+                          navigate(`/admin/programs/${p.id}/dashboard`)
+                        }
+                        className="px-3 py-1.5 text-white bg-gradient-to-b from-fantasy-green-light to-fantasy-green border-2 border-[#4A8A2C] rounded-sm shadow-[0_0_8px_rgba(92,161,54,0.3)] uppercase tracking-wider text-xs font-bold whitespace-nowrap"
+                      >
+                        View Program
+                      </button>
+                      <button
+                        onClick={() => {
+                          setProgramToEdit(p);
+                          setEditModalOpen(true);
+                        }}
+                        className="px-3 py-1.5 text-white bg-gradient-to-b from-royal-blue-light to-royal-blue border-2 border-royal-blue-dark rounded-sm uppercase tracking-wider text-xs font-bold whitespace-nowrap"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => {
+                          setProgramToDelete(p);
+                          setDeleteModalOpen(true);
+                        }}
+                        className="px-3 py-1.5 text-white bg-gradient-to-b from-roof-red-light to-roof-red border-2 border-[#A82518] rounded-sm uppercase tracking-wider text-xs font-bold whitespace-nowrap"
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -122,6 +146,37 @@ export function ProgramsPage() {
           fetchData();
           setCreateModalOpen(false);
           showToast("Program created", "success");
+        }}
+        showToast={showToast}
+      />
+      <EditProgramModal
+        key={programToEdit?.id}
+        open={editModalOpen}
+        onClose={() => {
+          setEditModalOpen(false);
+          setProgramToEdit(null);
+        }}
+        program={programToEdit}
+        onSuccess={() => {
+          fetchData();
+          setEditModalOpen(false);
+          setProgramToEdit(null);
+          showToast("Program updated", "success");
+        }}
+        showToast={showToast}
+      />
+      <DeleteProgramModal
+        open={deleteModalOpen}
+        onClose={() => {
+          setDeleteModalOpen(false);
+          setProgramToDelete(null);
+        }}
+        program={programToDelete}
+        onSuccess={() => {
+          fetchData();
+          setDeleteModalOpen(false);
+          setProgramToDelete(null);
+          showToast("Program deleted", "success");
         }}
         showToast={showToast}
       />
@@ -184,6 +239,117 @@ function CreateProgramModal({ open, onClose, onSuccess, showToast }) {
           </button>
         </Modal.Footer>
       </form>
+    </Modal>
+  );
+}
+
+function EditProgramModal({ open, onClose, program, onSuccess, showToast }) {
+  const [name, setName] = useState(program?.name ?? "");
+  const [loading, setLoading] = useState(false);
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    if (!program) return;
+    setLoading(true);
+    const { error } = await supabase
+      .from("programs")
+      .update({ name: name.trim() })
+      .eq("id", program.id);
+    setLoading(false);
+    if (error) {
+      showToast(error.message, "error");
+      return;
+    }
+    onSuccess();
+  }
+
+  if (!open || !program) return null;
+  return (
+    <Modal show={open} onClose={onClose}>
+      <Modal.Header>Edit Program</Modal.Header>
+      <form onSubmit={handleSubmit}>
+        <Modal.Body>
+          <div>
+            <label className="block text-sm font-medium text-gray-900 mb-1">
+              Program Name
+            </label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g., General Surgery Residency"
+              className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5"
+              required
+            />
+          </div>
+        </Modal.Body>
+        <Modal.Footer>
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-5 py-2.5 text-sm font-medium text-gray-900 bg-white border border-gray-300 rounded-lg hover:bg-gray-100"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={loading}
+            className="px-5 py-2.5 text-sm font-medium text-white bg-primary-700 rounded-lg hover:bg-primary-800"
+          >
+            {loading ? "Saving..." : "Save"}
+          </button>
+        </Modal.Footer>
+      </form>
+    </Modal>
+  );
+}
+
+function DeleteProgramModal({ open, onClose, program, onSuccess, showToast }) {
+  const [loading, setLoading] = useState(false);
+
+  async function handleConfirm() {
+    if (!program) return;
+    setLoading(true);
+    const { error } = await supabase
+      .from("programs")
+      .delete()
+      .eq("id", program.id);
+    setLoading(false);
+    if (error) {
+      showToast(error.message, "error");
+      return;
+    }
+    onSuccess();
+  }
+
+  if (!open || !program) return null;
+  return (
+    <Modal show={open} onClose={onClose}>
+      <Modal.Header>Delete Program</Modal.Header>
+      <Modal.Body>
+        <p className="text-sm text-gray-600 mb-2">
+          Are you sure you want to delete <strong>{program.name}</strong>? This
+          will permanently remove all leaders, residents, cohorts, and attempts
+          associated with this program.
+        </p>
+      </Modal.Body>
+      <Modal.Footer>
+        <button
+          type="button"
+          onClick={onClose}
+          className="px-5 py-2.5 text-sm font-medium text-gray-900 bg-white border border-gray-300 rounded-lg hover:bg-gray-100"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          onClick={handleConfirm}
+          disabled={loading}
+          className="px-5 py-2.5 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700"
+        >
+          {loading ? "Deleting..." : "Delete"}
+        </button>
+      </Modal.Footer>
     </Modal>
   );
 }

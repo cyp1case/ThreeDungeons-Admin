@@ -20,6 +20,8 @@ export function AppShell() {
     { path: "/residents", label: "Residents" },
     { path: "/cohorts", label: "Cohorts" },
     { path: "/dungeons", label: "Dungeons" },
+    { path: "/admin/invites", label: "Invites" },
+    { path: "/leaders", label: "Leaders" },
   ];
 
   const inspectNavItems = isInspecting
@@ -28,6 +30,7 @@ export function AppShell() {
         { path: `${linkPrefix}/residents`, label: "Residents" },
         { path: `${linkPrefix}/cohorts`, label: "Cohorts" },
         { path: `${linkPrefix}/dungeons`, label: "Dungeons" },
+        { path: `${linkPrefix}/leaders`, label: "Leaders" },
       ]
     : [];
 
